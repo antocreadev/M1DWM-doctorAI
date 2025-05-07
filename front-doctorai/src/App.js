@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import Dashboard from "./pages/Dashboard";
+import Chatbot from "./pages/Chatbot";
+import Diagnostic from "./pages/Diagnostic";
+
+
+
 
 // Atome : Champ de saisie
 const Input = ({ type = "text", placeholder, value, onChange, name }) => (
@@ -180,6 +186,11 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/data-entry" element={<DataEntryPage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/chatbot" element={<Chatbot />} />
+        <Route path="/diagnostic" element={<Diagnostic />} />
+
+
       </Routes>
     </Router>
   );
