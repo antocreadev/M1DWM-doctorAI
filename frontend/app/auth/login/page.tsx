@@ -1,0 +1,141 @@
+"use client";
+
+import type React from "react";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Loader2, Stethoscope } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Simulate login
+    setTimeout(() => {
+      setIsLoading(false);
+      router.push("/dashboard");
+    }, 1500);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white flex flex-col items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-6 text-teal-700 hover:text-teal-900 hover:bg-teal-50"
+          asChild
+        >
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Retour à l&apos;accueil
+          </Link>
+        </Button>
+
+        <Card className="w-full border-teal-200">
+          <CardHeader className="space-y-1">
+            <div className="flex justify-center mb-2">
+              <Stethoscope className="h-12 w-12 text-teal-600" />
+            </div>
+            <CardTitle className="text-2xl text-center text-teal-900">
+              Connexion
+            </CardTitle>
+            <CardDescription className="text-center text-teal-700">
+              Connectez-vous à votre compte MediAssist
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-teal-700">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="votre@email.com"
+                  required
+                  className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-teal-700">
+                    Mot de passe
+                  </Label>
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm text-teal-600 hover:text-teal-800"
+                  >
+                    Mot de passe oublié?
+                  </Link>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connexion en cours...
+                  </>
+                ) : (
+                  "Se connecter"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-teal-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-teal-600">Ou</span>
+              </div>
+            </div>
+            <p className="text-center text-sm text-teal-700">
+              Vous n&apos;avez pas de compte?{" "}
+              <Link
+                href="/auth/register"
+                className="text-teal-600 hover:text-teal-800 font-medium"
+              >
+                S&apos;inscrire
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
+  );
+}
