@@ -1,4 +1,3 @@
-from sqlite3 import IntegrityError
 from flask import Flask, request, jsonify, send_from_directory, json
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -8,7 +7,6 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity,
 )
-import config
 import os
 from flasgger import Swagger
 from datetime import datetime
@@ -19,27 +17,46 @@ from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from PyPDF2 import PdfReader
 import requests
-
+import logging
 
 # Configuration de base
 app = Flask(__name__)
-
 CORS(app)
-app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
-app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
-app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
+
+# Configuration de la base de données PostgreSQL avec Cloud SQL
+DB_USER = os.environ.get('DB_USER', 'postgres')
+DB_PASS = os.environ.get('DB_PASS', 'mediassist123')
+DB_NAME = os.environ.get('DB_NAME', 'mediassist')
+INSTANCE_CONNECTION_NAME = os.environ.get('INSTANCE_CONNECTION_NAME', 'your-project:your-region:mediassist-db')
+ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
+
+# Configuration JWT et dossier d'upload
+app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg=')
+app.config["UPLOAD_FOLDER"] = os.environ.get('UPLOAD_FOLDER', 'uploads')
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-model_name = "tinyllama"
+
+# Configurons la chaîne de connexion selon l'environnement
+if ENVIRONMENT == 'production':
+    # Pour Google Cloud SQL avec socket
+    socket_dir = "/cloudsql"
+    postgres_uri = f"postgresql://{DB_USER}:{DB_PASS}@/{DB_NAME}?host={socket_dir}/{INSTANCE_CONNECTION_NAME}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = postgres_uri
+    app.logger.info(f"Connecting to Cloud SQL (PostgreSQL) using socket: {INSTANCE_CONNECTION_NAME}")
+else:
+    # Pour le développement local (peut être modifié selon vos besoins)
+    postgres_local_uri = f"postgresql://{DB_USER}:{DB_PASS}@localhost:5432/{DB_NAME}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = postgres_local_uri
+    app.logger.info("Connecting to local PostgreSQL database")
 
 # Rendre l'hôte Ollama configurable via variable d'environnement
-ollama_host = os.environ.get(
-    "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app"
-)
+ollama_host = os.environ.get("OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app")
+OLLAMA_API_URL = ollama_host + "/api/chat"
+model_name = os.environ.get("MODEL_NAME", "tinyllama")
 
 # Variables pour indiquer si Ollama est disponible
 ollama_available = False
 
-# Pull du modèle avec une requête POST directe
+# Essayons de connecter Ollama
 try:
     print(f"Tentative de connexion à Ollama sur {ollama_host}...")
 
@@ -81,7 +98,6 @@ swagger = Swagger(
     },
 )
 
-
 # Extensions
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -89,7 +105,6 @@ jwt = JWTManager(app)
 
 
 ### MODELES ###
-
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -109,22 +124,22 @@ class User(db.Model):
     antecedents = db.Column(db.String(500), nullable=True)
     medicaments = db.Column(db.String(500), nullable=True)
     allergies = db.Column(db.String(500), nullable=True)
-    fichiers = db.relationship("File", backref="user", lazy=True)
-    conversations = db.relationship("Conversation", backref="user", lazy=True)
+    fichiers = db.relationship("File", backref="user", lazy=True, cascade="all, delete-orphan")
+    conversations = db.relationship("Conversation", backref="user", lazy=True, cascade="all, delete-orphan")
 
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100))
     chemin = db.Column(db.String(200))
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
 
 
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     titre = db.Column(db.String(100))
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    messages = db.relationship("Message", backref="conversation", lazy=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    messages = db.relationship("Message", backref="conversation", lazy=True, cascade="all, delete-orphan")
 
 
 class Message(db.Model):
@@ -132,12 +147,11 @@ class Message(db.Model):
     contenu = db.Column(db.Text)
     role = db.Column(db.String(10))  # 'user' ou 'ai'
     conversation_id = db.Column(
-        db.Integer, db.ForeignKey("conversation.id"), nullable=False
+        db.Integer, db.ForeignKey("conversation.id", ondelete="CASCADE"), nullable=False
     )
 
 
 ### ROUTES AUTH ###
-
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -193,13 +207,6 @@ def register():
 
         return jsonify(message="Utilisateur enregistré"), 201
 
-    except IntegrityError:
-        db.session.rollback()
-        return (
-            jsonify(error="Erreur d'intégrité des données (email déjà utilisé)."),
-            400,
-        )
-
     except Exception as e:
         db.session.rollback()
         return jsonify(error=f"Erreur interne : {str(e)}"), 500
@@ -240,7 +247,6 @@ def login():
 
 
 ### ROUTES UTILISATEUR ###
-
 
 @app.route("/me", methods=["GET"])
 @jwt_required()
@@ -289,7 +295,6 @@ def me():
 
 
 ### UPLOAD FICHIERS ###
-
 
 @app.route("/upload", methods=["POST"])
 @jwt_required()
@@ -421,7 +426,6 @@ def lister_fichiers():
 
 ### CONVERSATIONS ###
 
-
 @app.route("/conversations", methods=["POST"])
 @jwt_required()
 def creer_conversation():
@@ -485,14 +489,51 @@ def ajouter_message(id):
     """
     data = request.json
     message_user = Message(contenu=data["contenu"], role="user", conversation_id=id)
-    message_ai = Message(
-        contenu="".join(random.choices(string.ascii_letters, k=40)),
-        role="ai",
-        conversation_id=id,
-    )
-    db.session.add_all([message_user, message_ai])
+    
+    # Ajout du message utilisateur
+    db.session.add(message_user)
     db.session.commit()
-    return jsonify(message="Message ajouté avec réponse IA")
+    
+    # Si Ollama est disponible, utiliser l'IA pour la réponse
+    ai_response = ""
+    if ollama_available:
+        try:
+            payload = {
+                "model": model_name,
+                "messages": [{"role": "user", "content": data["contenu"]}],
+            }
+            
+            response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
+            full_reply = []
+            
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        data_json = json.loads(line.decode("utf-8"))
+                        bot_reply = data_json.get("message", {}).get("content", "")
+                        if bot_reply:
+                            full_reply.append(bot_reply)
+                    except json.JSONDecodeError:
+                        print("Erreur lors du décodage du JSON:", line)
+                        
+            ai_response = " ".join(full_reply)
+        except Exception as e:
+            print(f"Erreur lors de la communication avec Ollama: {e}")
+            ai_response = "Je suis désolé, je ne peux pas répondre pour le moment."
+    else:
+        # Réponse de repli si Ollama n'est pas disponible
+        ai_response = "Service IA temporairement indisponible. Veuillez réessayer plus tard."
+    
+    # Si la réponse est vide, utiliser un message par défaut
+    if not ai_response:
+        ai_response = "Je suis désolé, je n'ai pas pu générer une réponse valide."
+    
+    # Ajout de la réponse IA
+    message_ai = Message(contenu=ai_response, role="ai", conversation_id=id)
+    db.session.add(message_ai)
+    db.session.commit()
+    
+    return jsonify(message="Message ajouté avec réponse IA", ai_response=ai_response)
 
 
 @app.route("/conversations/<int:id>", methods=["DELETE"])
@@ -524,6 +565,7 @@ def supprimer_conversation(id):
 
 
 @app.route("/conversations", methods=["GET"])
+@jwt_required()
 def lister_conversations():
     """
     Lister les conversations de l'utilisateur
@@ -579,13 +621,32 @@ def lister_messages(id):
     return jsonify([{"role": m.role, "contenu": m.contenu} for m in conv.messages])
 
 
-OLLAMA_API_URL = ollama_host + "/api/chat"
-
-
 @app.route("/chat", methods=["POST"])
-def upload_pdf():
+def chat():
+    """
+    Envoyer un message à l'IA sans créer de conversation
+    ---
+    tags:
+      - IA
+    parameters:
+      - in: body
+        name: message
+        schema:
+          type: object
+          required: [text]
+          properties:
+            text: {type: string}
+    responses:
+      200:
+        description: Réponse de l'IA
+      500:
+        description: Erreur de l'IA
+    """
     data = request.get_json()
     user_message = data.get("text", "")
+
+    if not ollama_available:
+        return jsonify({"summary": "Service IA non disponible pour le moment."}), 503
 
     # Envoi du message à Ollama
     payload = {
@@ -593,45 +654,92 @@ def upload_pdf():
         "messages": [{"role": "user", "content": user_message}],
     }
 
-    # Envoyer la requête en mode stream
-    response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
+    try:
+        # Envoyer la requête en mode stream
+        response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
 
-    # Liste pour stocker les parties de la réponse
-    full_reply = []
+        # Liste pour stocker les parties de la réponse
+        full_reply = []
 
-    # Lire chaque ligne de la réponse
-    for line in response.iter_lines():
-        if line:
-            try:
-                # Décoder chaque ligne JSON
-                data = json.loads(line.decode("utf-8"))
-                # Ajouter le contenu de la réponse du bot à la liste
-                bot_reply = data.get("message", {}).get("content", "")
-                if bot_reply:
-                    full_reply.append(bot_reply)
-            except json.JSONDecodeError:
-                print("Erreur lors du décodage du JSON:", line)
+        # Lire chaque ligne de la réponse
+        for line in response.iter_lines():
+            if line:
+                try:
+                    # Décoder chaque ligne JSON
+                    data = json.loads(line.decode("utf-8"))
+                    # Ajouter le contenu de la réponse du bot à la liste
+                    bot_reply = data.get("message", {}).get("content", "")
+                    if bot_reply:
+                        full_reply.append(bot_reply)
+                except json.JSONDecodeError:
+                    print("Erreur lors du décodage du JSON:", line)
 
-    # Joindre toutes les parties de la réponse pour obtenir la réponse complète
-    final_reply = " ".join(full_reply)
+        # Joindre toutes les parties de la réponse pour obtenir la réponse complète
+        final_reply = " ".join(full_reply)
 
-    # Si aucune réponse n'a été trouvée
-    if not final_reply:
-        return jsonify({"error": "No valid reply from the model"}), 500
+        # Si aucune réponse n'a été trouvée
+        if not final_reply:
+            return jsonify({"error": "No valid reply from the model"}), 500
 
-    return jsonify({"summary": final_reply})
-
-
-### INIT DB ###
-
-
-@app.cli.command("init-db")
-def init_db():
-    db.create_all()
-    print("Base de données initialisée.")
+        return jsonify({"summary": final_reply})
+    
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors de la communication avec l'IA: {str(e)}"}), 500
 
 
-### LANCEMENT ###
+# Route pour la santé de l'API
+@app.route("/health", methods=["GET"])
+def health_check():
+    """
+    Vérifier l'état de santé de l'API
+    ---
+    tags:
+      - Système
+    responses:
+      200:
+        description: API en bonne santé
+        schema:
+          type: object
+          properties:
+            status: {type: string}
+            database: {type: string}
+            ollama: {type: string}
+    """
+    # Vérifier la base de données
+    db_status = "ok"
+    try:
+        # Exécuter une requête simple pour vérifier la connexion à la base de données
+        db.session.execute("SELECT 1")
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
+    return jsonify({
+        "status": "running",
+        "database": db_status,
+        "ollama": "available" if ollama_available else "unavailable"
+    })
+
+
+# Initialisation de la base de données
+@app.before_first_request
+def initialize_database():
+    """Crée les tables de la base de données si elles n'existent pas"""
+    try:
+        db.create_all()
+        app.logger.info("Base de données initialisée avec succès.")
+    except Exception as e:
+        app.logger.error(f"Erreur lors de l'initialisation de la base de données: {str(e)}")
+
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Configuration du logging
+    logging.basicConfig(level=logging.INFO)
+    
+    # Création des tables avant le démarrage
+    with app.app_context():
+        db.create_all()
+        print("Base de données initialisée.")
+    
+    # Démarrage du serveur
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=False)

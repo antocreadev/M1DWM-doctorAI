@@ -2,7 +2,7 @@ name: Build and Deploy Backend
 
 on:
   push:
-    branches: [ main, mergedAll ]  # Ajout de main comme branche de déclenchement
+    branches: [ main, lancementDB ]  # Ajout de main comme branche de déclenchement
     paths:
       - 'backend/**'
       - '.github/workflows/backend.yml'
