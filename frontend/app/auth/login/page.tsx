@@ -26,14 +26,13 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
+    console.log("TEST CI");
     // Simulate login
     setTimeout(() => {
       setIsLoading(false);
       router.push("/dashboard");
     }, 1500);
   };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white flex flex-col items-center justify-center p-4">
       <motion.div
