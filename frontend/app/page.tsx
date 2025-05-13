@@ -11,12 +11,25 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+// import { useStore } from "@/stores/bears";
+
+// function BearCounter() {
+//   const bears = useStore((state) => state.bears);
+//   return <h1>{bears} bears around here...</h1>;
+// }
+
+// function Controls() {
+//   const increasePopulation = useStore((state) => state.increasePopulation);
+//   return <button onClick={increasePopulation}>one up</button>;
+// }
 
 export default function LandingPage() {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white">
+      {/* <BearCounter />
+      <Controls /> */}
       <header className="container mx-auto py-6 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <motion.div

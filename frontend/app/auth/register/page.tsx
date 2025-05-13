@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,16 +18,57 @@ import {
 } from "@/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useStore, User } from "@/stores/data-users";
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
+  const setUser = useStore((state) => state.updateUser);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    // setIsLoading(true);
+    console.log(formRef);
+    const formData = new FormData(formRef.current as HTMLFormElement);
+    const data = {
+      firstName: formData.get("firstName") || "",
+      lastName: formData.get("lastName") || "",
+      email: formData.get("email") || "",
+      password: formData.get("password") || "",
+      confirmPassword: formData.get("confirmPassword") || "",
+    };
+    console.log(data);
 
-    // Simulate registration
+    // Verifier si le mot de passe et la confirmation du mot de passe correspondent
+    if (data.password !== data.confirmPassword) {
+      alert("Les mots de passe ne correspondent pas");
+      return;
+    }
+    // function BearCounter() {
+    //   const bears = useStore((state) => state.bears);
+    //   return <h1>{bears} bears around here...</h1>;
+    // }
+    setUser({
+      prenom: data.firstName,
+      nom: data.lastName,
+      email: data.email,
+      password: data.password,
+      date_naissance: new Date(),
+      genre: "",
+      adresse: "",
+      ville: "",
+      code_postal: "",
+      telephone: "",
+      profession: "",
+      terms: false,
+      data: false,
+    } as User);
+
+    // const user = useStore.getState().user;
+    // console.log(user);
+
+
     setTimeout(() => {
       setIsLoading(false);
       router.push("/onboarding/step-1");
@@ -67,7 +108,7 @@ export default function RegisterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" ref={formRef}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName" className="text-teal-700">
@@ -75,6 +116,7 @@ export default function RegisterPage() {
                   </Label>
                   <Input
                     id="firstName"
+                    name="firstName"
                     required
                     className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
                   />
@@ -85,6 +127,7 @@ export default function RegisterPage() {
                   </Label>
                   <Input
                     id="lastName"
+                    name="lastName"
                     required
                     className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
                   />
@@ -96,6 +139,7 @@ export default function RegisterPage() {
                 </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="votre@email.com"
                   required
@@ -109,6 +153,7 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type="password"
+                  name="password"
                   required
                   className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
                 />
@@ -120,6 +165,7 @@ export default function RegisterPage() {
                 <Input
                   id="confirmPassword"
                   type="password"
+                  name="confirmPassword"
                   required
                   className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
                 />
