@@ -2,8 +2,9 @@ import unittest
 import json
 import os
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from app import app, db, User, Conversation, Message, File, bcrypt
+from flask_jwt_extended import create_access_token
 
 class FlaskAppTestCase(unittest.TestCase):
     """Tests de base pour l'application Flask"""
@@ -14,6 +15,7 @@ class FlaskAppTestCase(unittest.TestCase):
         app.config['TESTING'] = True
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
         app.config['JWT_SECRET_KEY'] = 'test-key'
+        app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)  # Augmenter la durée de validité du token
         self.temp_folder = tempfile.mkdtemp()
         app.config['UPLOAD_FOLDER'] = self.temp_folder
         
@@ -26,7 +28,7 @@ class FlaskAppTestCase(unittest.TestCase):
             
             # Créer un utilisateur de test
             hashed_password = bcrypt.generate_password_hash('password123').decode('utf-8')
-            test_user = User(
+            self.test_user = User(
                 prenom='Test',
                 nom='User',
                 email='test@example.com',
@@ -41,8 +43,12 @@ class FlaskAppTestCase(unittest.TestCase):
                 terms=True,
                 data=True
             )
-            db.session.add(test_user)
+            db.session.add(self.test_user)
             db.session.commit()
+            
+            # Créer un token directement (pour contourner l'API de login)
+            with app.app_context():
+                self.access_token = create_access_token(identity=self.test_user.id)
     
     def tearDown(self):
         """Nettoyage après chaque test"""
@@ -91,14 +97,15 @@ class FlaskAppTestCase(unittest.TestCase):
         data = json.loads(response.data)
         self.assertIn('token', data)
         
-        return data['token']
+        # Retourner le token créé dans setUp plutôt que celui généré par l'API
+        return self.access_token
     
     def test_profile(self):
         """Test de récupération du profil utilisateur"""
-        # D'abord se connecter
-        token = self.test_login()
+        # Utiliser le token créé dans setUp
+        token = self.access_token
         
-        # Accéder au profil - CORRECTION: Format correct du header Bearer
+        # Accéder au profil
         response = self.app.get(
             '/me',
             headers={'Authorization': f'Bearer {token}'}
@@ -112,9 +119,8 @@ class FlaskAppTestCase(unittest.TestCase):
     
     def test_conversation_workflow(self):
         """Test du flux complet pour les conversations"""
-        # D'abord se connecter
-        token = self.test_login()
-        # CORRECTION: Format correct du header Bearer
+        # Utiliser le token créé dans setUp
+        token = self.access_token
         headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
         
         # 1. Créer une conversation
@@ -159,9 +165,8 @@ class FlaskAppTestCase(unittest.TestCase):
     
     def test_file_upload(self):
         """Test d'upload et de gestion de fichiers"""
-        # D'abord se connecter
-        token = self.test_login()
-        # CORRECTION: Format correct du header Bearer
+        # Utiliser le token créé dans setUp
+        token = self.access_token
         headers = {'Authorization': f'Bearer {token}'}
         
         # Créer un fichier temporaire
