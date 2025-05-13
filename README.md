@@ -1,6 +1,10 @@
 # Lancer le backend
 
 ```bash
+cd backend
+```
+
+```bash
 python -m venv .venv
 ```
 
