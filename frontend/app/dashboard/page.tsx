@@ -44,7 +44,7 @@ export default function Dashboard() {
     const token = localStorage.getItem("token");
     console.log("Token:", token);
     // Fetch user data or perform any necessary actions
-    fetch("http://127.0.0.1:5000/me", {
+    fetch("https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

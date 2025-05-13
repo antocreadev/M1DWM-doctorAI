@@ -5,3 +5,5 @@ flask_jwt_extended
 flasgger
 flask-cors
 ollama
+requests
+PyPDF2

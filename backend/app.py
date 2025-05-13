@@ -1,5 +1,5 @@
 from sqlite3 import IntegrityError
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, json
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
@@ -18,6 +18,8 @@ from werkzeug.utils import secure_filename
 
 from ollama import pull, chat, ResponseError
 from flask_cors import CORS
+from PyPDF2 import PdfReader
+import requests
 
 
 # Configuration de base
@@ -28,14 +30,31 @@ app.config["JWT_SECRET_KEY"] = "secret"
 app.config["UPLOAD_FOLDER"] = "uploads"
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 model_name = "tinyllama"
-# Pull du modèle
+# Rendre l'hôte Ollama configurable via variable d'environnement
+ollama_host = os.environ.get(
+    "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app/"
+)
+
+# Variables pour indiquer si Ollama est disponible
+ollama_available = False
 try:
+    print(f"Tentative de connexion à Ollama sur {ollama_host}...")
+
+    # Utiliser requests pour envoyer une requête POST
+    pull_url = f"{ollama_host}/api/pull"
+    pull_data = {"name": model_name}
+
     print(f"Téléchargement du modèle '{model_name}'...")
-    pull(model_name)
+
+    response = requests.post(pull_url, json=pull_data)
+    response.raise_for_status()  # Lever une exception si la réponse n'est pas 2xx
+
     print("✅ Modèle téléchargé avec succès.")
-except ResponseError as e:
-    print(f"❌ Erreur lors du téléchargement : {e.error}")
-    exit(1)
+    ollama_available = True
+
+except Exception as e:
+    print(f"⚠️ Impossible d'initialiser Ollama: {e}")
+    print("L'application continuera sans les fonctionnalités d'IA...")
 
 # Swagger
 swagger = Swagger(
@@ -553,6 +572,46 @@ def lister_messages(id):
     """
     conv = Conversation.query.get_or_404(id)
     return jsonify([{"role": m.role, "contenu": m.contenu} for m in conv.messages])
+
+
+OLLAMA_API_URL = ollama_host + "/api/chat"
+@app.route("/chat", methods=["POST"])
+def upload_pdf():
+    data = request.get_json()
+    user_message = data.get("text", "")
+
+    # Envoi du message à Ollama
+    payload = {
+        "messages": [{"role": "user", "content": user_message}],
+    }
+
+    # Envoyer la requête en mode stream
+    response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
+
+    # Liste pour stocker les parties de la réponse
+    full_reply = []
+
+    # Lire chaque ligne de la réponse
+    for line in response.iter_lines():
+        if line:
+            try:
+                # Décoder chaque ligne JSON
+                data = json.loads(line.decode("utf-8"))
+                # Ajouter le contenu de la réponse du bot à la liste
+                bot_reply = data.get("message", {}).get("content", "")
+                if bot_reply:
+                    full_reply.append(bot_reply)
+            except json.JSONDecodeError:
+                print("Erreur lors du décodage du JSON:", line)
+
+    # Joindre toutes les parties de la réponse pour obtenir la réponse complète
+    final_reply = " ".join(full_reply)
+
+    # Si aucune réponse n'a été trouvée
+    if not final_reply:
+        return jsonify({"error": "No valid reply from the model"}), 500
+
+    return jsonify({"summary": final_reply})
 
 
 ### INIT DB ###

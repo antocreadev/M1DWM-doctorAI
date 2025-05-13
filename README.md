@@ -37,9 +37,8 @@ flask run
 Ouvrir l'URL suivante dans le navigateur :
 
 ```
-http://127.0.0.1:5000/apidocs/
+https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/apidocs/
 ```
-
 
 # Lancer le frontend
 
@@ -51,19 +50,21 @@ cd frontend
 bun i
 ```
 
-
 ```bash
 bun dev
 ```
 
+# Local
 
-# Local 
 ## Ollama
+
 ```bash
 docker pull ollama/ollama
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
-## Chroma db 
+
+## Chroma db
+
 ```bash
 docker pull chromadb/chroma
 docker run -v ./chroma-data:/data -p 8000:8000 chromadb/chroma

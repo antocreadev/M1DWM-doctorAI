@@ -38,7 +38,7 @@ export default function LoginPage() {
       password: formData.get("password") || "",
     };
 
-    fetch("http://127.0.0.1:5000/login", {
+    fetch("https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
