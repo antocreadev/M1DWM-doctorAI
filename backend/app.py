@@ -304,7 +304,7 @@ def analyze_pdf():
         return jsonify({"error": "Fichier non sélectionné"}), 400
 
     # Sauvegarde temporaire du fichier
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
     file.save(file_path)
 
     # Extraction du texte du PDF
