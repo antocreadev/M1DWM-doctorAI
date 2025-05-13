@@ -15,6 +15,7 @@ import uuid
 import os
 from werkzeug.utils import secure_filename
 
+
 # Configuration de base
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
