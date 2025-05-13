@@ -8,6 +8,7 @@ from flask_jwt_extended import (
     get_jwt_identity,
 )
 from flasgger import Swagger
+from flask_cors import CORS
 from datetime import datetime
 import random
 import string
@@ -17,6 +18,7 @@ from werkzeug.utils import secure_filename
 
 # Configuration de base
 app = Flask(__name__)
+CORS(app)  # Activation de CORS pour toutes les routes
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["JWT_SECRET_KEY"] = "secret"
 app.config["UPLOAD_FOLDER"] = "uploads"
@@ -41,6 +43,22 @@ swagger = Swagger(
                 "description": "JWT Authorization header using the Bearer scheme. Exemple : 'Authorization: Bearer {token}'",
             }
         },
+        "schemes": ["http", "https"],
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+    },
+    config={
+        "headers": [],
+        "specs": [
+            {
+                "endpoint": "apispec",
+                "route": "/apispec.json",
+                "rule_filter": lambda rule: True,  # all in
+                "model_filter": lambda tag: True,  # all in
+            }
+        ],
+        "swagger_ui": True,
+        "specs_route": "/swagger/",
     },
 )
 
