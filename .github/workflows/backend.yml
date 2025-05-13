@@ -65,3 +65,8 @@ jobs:
           ENVIRONMENT=production
           GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }}
           OLLAMA_HOST=https://ollama-gemma-bv5bumqn3a-ew.a.run.app
+          INSTANCE_CONNECTION_NAME=${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:mediassist-db
+          DB_USER=postgres
+          DB_PASS=mediassist123
+          DB_NAME=mediassist
+          JWT_SECRET_KEY=ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg=

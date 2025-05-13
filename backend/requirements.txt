@@ -10,3 +10,4 @@ gunicorn
 flasgger
 flask-cors
 ollama
+pg8000
