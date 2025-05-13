@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, use } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,16 +22,41 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
 
+  useEffect(() => {
+    console.log("LoginPage mounted");
+    return () => {
+      console.log("LoginPage unmounted");
+    };
+  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    const formData = new FormData(formRef.current as HTMLFormElement);
+    const data = {
+      email: formData.get("email") || "",
+      password: formData.get("password") || "",
+    };
 
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push("/dashboard");
-    }, 1500);
+    fetch("http://127.0.0.1:5000/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Success:", data);
+        const token = data.token;
+        // met le token dans le localStorage
+        localStorage.setItem("token", token);
+        // redirige vers la page d'accueil
+        router.push("/dashboard");
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
   };
 
   return (
@@ -67,13 +92,14 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" ref={formRef}>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-teal-700">
                   Email
                 </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="votre@email.com"
                   required
@@ -94,6 +120,7 @@ export default function LoginPage() {
                 </div>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   required
                   className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"

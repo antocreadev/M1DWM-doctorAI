@@ -20,10 +20,112 @@ import {
   Stethoscope,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+
+interface UserData {
+  nom?: string;
+  prenom?: string;
+  email?: string;
+  telephone?: string;
+  adresse?: string;
+  ville?: string;
+  code_postal?: string;
+  date_naissance?: string;
+  genre?: string;
+  allergies?: string;
+  antecedents?: string;
+  medicaments?: string;
+}
 
 export default function Dashboard() {
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    console.log("Token:", token);
+    // Fetch user data or perform any necessary actions
+    fetch("http://127.0.0.1:5000/me", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("User data fetched successfully:", data);
+        setUserData(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching user data:", error);
+      });
+  }, []);
+  if (!userData) {
+    return <div className="text-teal-600">Chargement des données...</div>;
+  }
+
   return (
     <div className="space-y-6">
+      <div className="space-y-2 mb-4">
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Nom:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.nom || "—"}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Prénom:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.prenom || "—"}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Email:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.email || "—"}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Téléphone:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.telephone || "—"}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Adresse:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.adresse}, {userData?.ville} {userData?.code_postal}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Date de naissance:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.date_naissance}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Genre:</span>
+          <span className="font-medium text-teal-900">{userData?.genre}</span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Allergies:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.allergies || "Aucune"}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Antécédents:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.antecedents || "—"}
+          </span>
+        </div>
+        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+          <span className="text-teal-600">Médicaments:</span>
+          <span className="font-medium text-teal-900">
+            {userData?.medicaments || "—"}
+          </span>
+        </div>
+      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -293,7 +395,6 @@ export default function Dashboard() {
             </Button>
           </CardContent>
         </Card>
-
       </motion.div>
     </div>
   );

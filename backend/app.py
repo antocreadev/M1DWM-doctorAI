@@ -1,3 +1,4 @@
+from sqlite3 import IntegrityError
 from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -14,11 +15,14 @@ import string
 import uuid
 import os
 from werkzeug.utils import secure_filename
+
 from ollama import pull, chat, ResponseError
+from flask_cors import CORS
 
 
 # Configuration de base
 app = Flask(__name__)
+CORS(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["JWT_SECRET_KEY"] = "secret"
 app.config["UPLOAD_FOLDER"] = "uploads"
@@ -118,58 +122,63 @@ def register():
     ---
     tags:
       - Auth
-    parameters:
-      - in: body
-        name: utilisateur
-        schema:
-          type: object
-          required: [prenom, nom, email, password, date_naissance, genre, adresse, ville, code_postal, telephone, profession, terms, data]
-          properties:
-            prenom: {type: string}
-            nom: {type: string}
-            email: {type: string}
-            password: {type: string}
-            date_naissance: {type: string, format: date}
-            genre: {type: string}
-            adresse: {type: string}
-            ville: {type: string}
-            code_postal: {type: string}
-            telephone: {type: string}
-            profession: {type: string}
-            terms: {type: boolean}
-            data: {type: boolean}
-            antecedents: {type: string}
-            medicaments: {type: string}
-            allergies: {type: string}
     responses:
       201:
         description: Utilisateur enregistré
       400:
-        description: Erreur de validation
+        description: Email déjà utilisé ou données invalides
+      500:
+        description: Erreur interne du serveur
     """
     data = request.json
-    hashed_pw = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
-    user = User(
-        prenom=data["prenom"],
-        nom=data["nom"],
-        email=data["email"],
-        password=hashed_pw,
-        date_naissance=datetime.strptime(data["date_naissance"], "%Y-%m-%d"),
-        genre=data["genre"],
-        adresse=data["adresse"],
-        ville=data["ville"],
-        code_postal=data["code_postal"],
-        telephone=data["telephone"],
-        profession=data["profession"],
-        terms=data["terms"],
-        data=data["data"],
-        antecedents=data.get("antecedents"),
-        medicaments=data.get("medicaments"),
-        allergies=data.get("allergies"),
-    )
-    db.session.add(user)
-    db.session.commit()
-    return jsonify(message="Utilisateur enregistré"), 201
+    print("Données reçues:", data)
+
+    # Vérifie si l'email existe déjà
+    existing_user = User.query.filter_by(email=data["email"]).first()
+    if existing_user:
+        return jsonify(error="Cet email est déjà utilisé."), 400
+
+    try:
+        hashed_pw = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
+        terms = data["terms"] == "on" or data["terms"] is True
+        data_processing = data.get("data") == "on" or data.get("data") is True
+
+        user = User(
+            prenom=data["prenom"],
+            nom=data["nom"],
+            email=data["email"],
+            password=hashed_pw,
+            date_naissance=datetime.fromisoformat(
+                data["date_naissance"].replace("Z", "+00:00")
+            ),
+            genre=data["genre"],
+            adresse=data["adresse"],
+            ville=data["ville"],
+            code_postal=data["code_postal"],
+            telephone=data["telephone"],
+            profession=data["profession"],
+            terms=terms,
+            data=data_processing,
+            antecedents=data.get("antecedents"),
+            medicaments=data.get("medicaments"),
+            allergies=data.get("allergies"),
+        )
+
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify(message="Utilisateur enregistré"), 201
+
+    except IntegrityError:
+        db.session.rollback()
+        return (
+            jsonify(error="Erreur d'intégrité des données (email déjà utilisé)."),
+            400,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(error=f"Erreur interne : {str(e)}"), 500
 
 
 @app.route("/login", methods=["POST"])
@@ -201,7 +210,7 @@ def login():
     data = request.json
     user = User.query.filter_by(email=data["email"]).first()
     if user and bcrypt.check_password_hash(user.password, data["password"]):
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         return jsonify(token=access_token)
     return jsonify(message="Identifiants invalides"), 401
 
@@ -230,7 +239,29 @@ def me():
             prenom: {type: string}
     """
     user = User.query.get(get_jwt_identity())
-    return jsonify(email=user.email, nom=user.nom, prenom=user.prenom)
+    # renvoie toutes les informations
+    return jsonify(
+        id=user.id,
+        prenom=user.prenom,
+        nom=user.nom,
+        email=user.email,
+        date_naissance=user.date_naissance.isoformat(),
+        genre=user.genre,
+        adresse=user.adresse,
+        ville=user.ville,
+        code_postal=user.code_postal,
+        telephone=user.telephone,
+        profession=user.profession,
+        terms=user.terms,
+        data=user.data,
+        antecedents=user.antecedents,
+        medicaments=user.medicaments,
+        allergies=user.allergies,
+        conversations=[{"id": c.id, "titre": c.titre} for c in user.conversations],
+        fichiers=[
+            {"id": f.id, "nom": f.nom, "chemin": f.chemin} for f in user.fichiers
+        ],
+    )
 
 
 ### UPLOAD FICHIERS ###

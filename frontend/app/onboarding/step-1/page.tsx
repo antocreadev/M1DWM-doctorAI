@@ -23,18 +23,18 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Calendar,
-  User,
+  LucideUser,
   MapPin,
   Phone,
   Briefcase,
 } from "lucide-react";
-import { useStore } from "@/stores/data-users";
+import { useStore, User } from "@/stores/data-users";
 
 export default function OnboardingStep1() {
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const user = useStore.getState().user;
-  // const setUser = useStore((state) => state.updateUser);
+  const setUser = useStore((state) => state.updateUser);
 
   const handleNext = (event: React.FormEvent) => {
     event.preventDefault();
@@ -51,8 +51,39 @@ export default function OnboardingStep1() {
     };
 
     console.log(data);
+    // date_naissance: Date;
+    // genre: string;
+    // adresse: string;
+    // ville: string;
+    // code_postal: string;
+    // telephone: string;
+    // profession: string;
+    // terms: boolean;
+    // data: boolean;
+    // antecedents?: string | null;
+    // medicaments?: string | null;
+    // allergies?: string | null;
 
-    // router.push("/onboarding/step-2");
+    // convertie data.birthdate en Date
+    const birthdate = new Date(data.birthdate as string);
+
+    setUser({
+      ...user,
+      date_naissance: birthdate,
+      genre: data.gender,
+      adresse : data.address,
+      ville: data.city,
+      code_postal: data.postalCode,
+      telephone: data.phone,
+      profession: data.occupation,
+      terms: user.terms,
+      data: user.data,
+      antecedents: user.antecedents,
+      medicaments: user.medicaments,
+      allergies: user.allergies,
+    } as User);
+
+    router.push("/onboarding/step-2");
   };
 
   return (
@@ -65,7 +96,7 @@ export default function OnboardingStep1() {
       <Card className="border-teal-200">
         <CardHeader>
           <CardTitle className="text-xl text-teal-900 flex items-center gap-2">
-            <User className="h-5 w-5 text-teal-600" />
+            <LucideUser className="h-5 w-5 text-teal-600" />
             Informations personnelles
           </CardTitle>
           <CardDescription className="text-teal-700">
@@ -96,11 +127,9 @@ export default function OnboardingStep1() {
                   htmlFor="gender"
                   className="text-teal-700 flex items-center gap-1"
                 >
-                  <User className="h-4 w-4" /> Genre
+                  <LucideUser className="h-4 w-4" /> Genre
                 </Label>
-                <Select
-                  name="gender"
-                >
+                <Select name="gender">
                   <SelectTrigger className="border-teal-200 focus:border-teal-500 focus:ring-teal-500">
                     <SelectValue placeholder="Sélectionnez" />
                   </SelectTrigger>
