@@ -8,7 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Send, FileText, User, HeartPulse, Loader2 } from "lucide-react";
 
 export default function ChatBot() {
-  const [messages, setMessages] = useState<Array<{ sender: "user" | "bot"; text: string }>>([]);
+  const [messages, setMessages] = useState<
+    Array<{ sender: "user" | "bot"; text: string }>
+  >([]);
   const [inputMessage, setInputMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,11 +31,14 @@ export default function ChatBot() {
     setInputMessage("");
     setLoading(true);
 
-    const res = await fetch("http://localhost:5000/chat", {
-      method: "POST",
-      body: JSON.stringify({ text: inputMessage }),
-      headers: { "Content-Type": "application/json" },
-    });
+    const res = await fetch(
+      "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/chat",
+      {
+        method: "POST",
+        body: JSON.stringify({ text: inputMessage }),
+        headers: { "Content-Type": "application/json" },
+      }
+    );
 
     const data = await res.json();
     const botResponse = data.summary || "Erreur ou réponse vide de l'IA.";
@@ -44,16 +49,22 @@ export default function ChatBot() {
   const handleUploadPDF = async () => {
     if (!file) return alert("Veuillez choisir un fichier PDF.");
 
-    setMessages((prev) => [...prev, { sender: "user", text: `Fichier envoyé : ${file.name}` }]);
+    setMessages((prev) => [
+      ...prev,
+      { sender: "user", text: `Fichier envoyé : ${file.name}` },
+    ]);
     setLoading(true);
 
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("http://localhost:5000/uploadpdf", {
-      method: "POST",
-      body: formData,
-    });
+    const res = await fetch(
+      "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/uploadpdf",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
 
     const data = await res.json();
     const botResponse = data.summary || "Erreur pendant l'analyse du fichier.";
@@ -63,8 +74,10 @@ export default function ChatBot() {
   };
 
   return (
-<div className="w-full p-4 space-y-4 bg-white rounded-lg shadow-md border border-teal-100">
-  <h1 className="text-2xl font-semibold text-teal-700 text-center">Assistant médical IA</h1>
+    <div className="w-full p-4 space-y-4 bg-white rounded-lg shadow-md border border-teal-100">
+      <h1 className="text-2xl font-semibold text-teal-700 text-center">
+        Assistant médical IA
+      </h1>
 
       {/* Messages */}
       <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -76,7 +89,9 @@ export default function ChatBot() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${
+                msg.sender === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               <div className="flex items-start gap-2 max-w-[80%]">
                 {msg.sender === "bot" && (
@@ -86,7 +101,9 @@ export default function ChatBot() {
                 )}
                 <Card
                   className={`p-3 border-teal-200 ${
-                    msg.sender === "user" ? "bg-teal-100 text-teal-900" : "bg-white"
+                    msg.sender === "user"
+                      ? "bg-teal-100 text-teal-900"
+                      : "bg-white"
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
