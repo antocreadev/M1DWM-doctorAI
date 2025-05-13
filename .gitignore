@@ -31,3 +31,5 @@ backend/.pytest_cache
 backend/__pycache__
 backend/instance
 backend/instance/*
+backend/uploads/
+backend/uploads/*
