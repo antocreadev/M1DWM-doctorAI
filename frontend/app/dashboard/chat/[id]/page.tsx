@@ -1,13 +1,11 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useRef, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
-import { Send, User, HeartPulse, FileText, Paperclip, X } from "lucide-react"
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Send, User, HeartPulse, FileText, Paperclip, X } from "lucide-react";
 
 // Simulated chat history
 const chatHistory = [
@@ -19,7 +17,8 @@ const chatHistory = [
   },
   {
     id: 2,
-    content: "J'ai reçu mes résultats d'analyses sanguines et j'aimerais comprendre ce qu'ils signifient.",
+    content:
+      "J'ai reçu mes résultats d'analyses sanguines et j'aimerais comprendre ce qu'ils signifient.",
     sender: "user" as const,
     timestamp: new Date(Date.now() - 1000 * 60 * 9),
   },
@@ -32,7 +31,8 @@ const chatHistory = [
   },
   {
     id: 4,
-    content: "Oui, j'aimerais savoir comment augmenter mon taux de fer naturellement.",
+    content:
+      "Oui, j'aimerais savoir comment augmenter mon taux de fer naturellement.",
     sender: "user" as const,
     timestamp: new Date(Date.now() - 1000 * 60 * 7),
   },
@@ -43,26 +43,34 @@ const chatHistory = [
     sender: "bot" as const,
     timestamp: new Date(Date.now() - 1000 * 60 * 6),
   },
-]
+];
 
-export default function ChatPage({ params }: { params: { id: string } }) {
-  const [messages, setMessages] = useState(chatHistory)
-  const [input, setInput] = useState("")
-  const [isTyping, setIsTyping] = useState(false)
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+// Correct props type definition for Next.js App Router
+type ChatPageProps = {
+  params: {
+    id: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+export default function ChatPage({ params, searchParams }: ChatPageProps) {
+  const [messages, setMessages] = useState(chatHistory);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   const handleSend = () => {
-    if (input.trim() === "" && attachedFiles.length === 0) return
+    if (input.trim() === "" && attachedFiles.length === 0) return;
 
     // Add user message
     const userMessage = {
@@ -70,14 +78,14 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       content: input,
       sender: "user" as const,
       timestamp: new Date(),
-    }
+    };
 
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setAttachedFiles([])
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setAttachedFiles([]);
 
     // Simulate bot typing
-    setIsTyping(true)
+    setIsTyping(true);
 
     // Simulate bot response after delay
     setTimeout(() => {
@@ -87,30 +95,30 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           "Voici un exemple de menu journalier riche en fer :\n\n**Petit-déjeuner** :\n- Flocons d'avoine avec des fruits secs (abricots, raisins)\n- Un verre de jus d'orange frais (riche en vitamine C)\n\n**Déjeuner** :\n- Salade d'épinards avec des lentilles et des poivrons rouges\n- Viande rouge grillée ou tofu ferme pour les végétariens\n- Un kiwi en dessert\n\n**Collation** :\n- Une poignée d'amandes et de noix de cajou\n\n**Dîner** :\n- Quinoa aux légumes\n- Poisson ou œufs\n- Légumes verts cuits à la vapeur\n\nCe régime vous apportera environ 15-20 mg de fer par jour, ce qui correspond aux apports journaliers recommandés. N'oubliez pas de boire suffisamment d'eau tout au long de la journée.",
         sender: "bot" as const,
         timestamp: new Date(),
-      }
+      };
 
-      setMessages((prev) => [...prev, botMessage])
-      setIsTyping(false)
-    }, 2000)
-  }
+      setMessages((prev) => [...prev, botMessage]);
+      setIsTyping(false);
+    }, 2000);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
+      e.preventDefault();
+      handleSend();
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files)
-      setAttachedFiles((prev) => [...prev, ...newFiles])
+      const newFiles = Array.from(e.target.files);
+      setAttachedFiles((prev) => [...prev, ...newFiles]);
     }
-  }
+  };
 
   const removeFile = (index: number) => {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
-  }
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -122,7 +130,9 @@ export default function ChatPage({ params }: { params: { id: string } }) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
-              className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${
+                message.sender === "user" ? "justify-end" : "justify-start"
+              }`}
             >
               <div className="flex items-start gap-3 max-w-[80%]">
                 {message.sender === "bot" && (
@@ -132,11 +142,20 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                 )}
 
                 <Card
-                  className={`p-3 border-teal-200 ${message.sender === "user" ? "bg-teal-100 text-teal-900" : "bg-white"}`}
+                  className={`p-3 border-teal-200 ${
+                    message.sender === "user"
+                      ? "bg-teal-100 text-teal-900"
+                      : "bg-white"
+                  }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {message.content}
+                  </p>
                   <div className="text-xs text-teal-500 mt-1 text-right">
-                    {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {message.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
                 </Card>
 
@@ -187,9 +206,14 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         <div className="px-4 py-2 border-t border-teal-100 bg-teal-50">
           <div className="flex flex-wrap gap-2">
             {attachedFiles.map((file, index) => (
-              <div key={index} className="flex items-center bg-white rounded-md border border-teal-200 px-3 py-1">
+              <div
+                key={index}
+                className="flex items-center bg-white rounded-md border border-teal-200 px-3 py-1"
+              >
                 <FileText className="h-4 w-4 text-teal-600 mr-2" />
-                <span className="text-sm text-teal-700 truncate max-w-[150px]">{file.name}</span>
+                <span className="text-sm text-teal-700 truncate max-w-[150px]">
+                  {file.name}
+                </span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -207,7 +231,13 @@ export default function ChatPage({ params }: { params: { id: string } }) {
 
       <div className="p-4 border-t border-teal-100 bg-white">
         <div className="flex items-end gap-2">
-          <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} multiple />
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handleFileChange}
+            multiple
+          />
           <Button
             variant="outline"
             size="icon"
@@ -237,5 +267,5 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

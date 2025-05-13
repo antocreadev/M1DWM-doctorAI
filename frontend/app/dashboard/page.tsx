@@ -1,17 +1,40 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { HeartPulse, FileText, User, ArrowRight, Activity, Pill, Microscope, Stethoscope } from "lucide-react"
-import Link from "next/link"
+import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  HeartPulse,
+  FileText,
+  User,
+  ArrowRight,
+  Activity,
+  Pill,
+  Microscope,
+  Stethoscope,
+} from "lucide-react";
+import Link from "next/link";
 
 export default function Dashboard() {
   return (
     <div className="space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-2xl font-bold text-teal-900 mb-2">Bienvenue sur MediAssist</h1>
-        <p className="text-teal-700">Votre assistant médical intelligent est prêt à analyser vos données.</p>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-2xl font-bold text-teal-900 mb-2">
+          Bienvenue sur MediAssist
+        </h1>
+        <p className="text-teal-700">
+          Votre assistant médical intelligent est prêt à analyser vos données.
+        </p>
       </motion.div>
 
       {/* Medical stats */}
@@ -25,9 +48,15 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-teal-700 font-medium">Tension artérielle</p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">120/80</p>
-                  <p className="text-xs text-teal-600 mt-1">Dernière mesure: 10/05/2025</p>
+                  <p className="text-sm text-teal-700 font-medium">
+                    Tension artérielle
+                  </p>
+                  <p className="text-2xl font-bold text-teal-900 mt-1">
+                    120/80
+                  </p>
+                  <p className="text-xs text-teal-600 mt-1">
+                    Dernière mesure: 10/05/2025
+                  </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
                   <Activity className="h-6 w-6 text-teal-600" />
@@ -41,8 +70,12 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-teal-700 font-medium">Glycémie</p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">5.4 mmol/L</p>
-                  <p className="text-xs text-teal-600 mt-1">Dernière mesure: 12/05/2025</p>
+                  <p className="text-2xl font-bold text-teal-900 mt-1">
+                    5.4 mmol/L
+                  </p>
+                  <p className="text-xs text-teal-600 mt-1">
+                    Dernière mesure: 12/05/2025
+                  </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
                   <Microscope className="h-6 w-6 text-teal-600" />
@@ -55,9 +88,15 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-teal-700 font-medium">Cholestérol</p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">4.2 mmol/L</p>
-                  <p className="text-xs text-teal-600 mt-1">Dernière mesure: 08/05/2025</p>
+                  <p className="text-sm text-teal-700 font-medium">
+                    Cholestérol
+                  </p>
+                  <p className="text-2xl font-bold text-teal-900 mt-1">
+                    4.2 mmol/L
+                  </p>
+                  <p className="text-xs text-teal-600 mt-1">
+                    Dernière mesure: 08/05/2025
+                  </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
                   <HeartPulse className="h-6 w-6 text-teal-600" />
@@ -70,9 +109,15 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-teal-700 font-medium">Médicaments</p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">2 actifs</p>
-                  <p className="text-xs text-teal-600 mt-1">Dernière mise à jour: 15/05/2025</p>
+                  <p className="text-sm text-teal-700 font-medium">
+                    Médicaments
+                  </p>
+                  <p className="text-2xl font-bold text-teal-900 mt-1">
+                    2 actifs
+                  </p>
+                  <p className="text-xs text-teal-600 mt-1">
+                    Dernière mise à jour: 15/05/2025
+                  </p>
                 </div>
                 <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
                   <Pill className="h-6 w-6 text-teal-600" />
@@ -95,7 +140,9 @@ export default function Dashboard() {
                 <HeartPulse className="h-5 w-5 text-teal-600" />
                 Analyses récentes
               </CardTitle>
-              <CardDescription className="text-teal-700">Consultez vos analyses médicales récentes</CardDescription>
+              <CardDescription className="text-teal-700">
+                Consultez vos analyses médicales récentes
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 mb-4">
@@ -135,7 +182,9 @@ export default function Dashboard() {
                 <FileText className="h-5 w-5 text-teal-600" />
                 Documents
               </CardTitle>
-              <CardDescription className="text-teal-700">Gérez vos documents médicaux</CardDescription>
+              <CardDescription className="text-teal-700">
+                Gérez vos documents médicaux
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 mb-4">
@@ -181,7 +230,9 @@ export default function Dashboard() {
                 <User className="h-5 w-5 text-teal-600" />
                 Profil médical
               </CardTitle>
-              <CardDescription className="text-teal-700">Gérez vos informations médicales</CardDescription>
+              <CardDescription className="text-teal-700">
+                Gérez vos informations médicales
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 mb-4">
@@ -226,11 +277,15 @@ export default function Dashboard() {
               Commencer une nouvelle analyse
             </CardTitle>
             <CardDescription className="text-teal-700">
-              Posez vos questions médicales et obtenez des analyses basées sur vos données
+              Posez vos questions médicales et obtenez des analyses basées sur
+              vos données
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full bg-teal-600 hover:bg-teal-700 text-white" asChild>
+            <Button
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+              asChild
+            >
               <Link href="/dashboard/new-chat">
                 Nouvelle analyse
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -238,7 +293,8 @@ export default function Dashboard() {
             </Button>
           </CardContent>
         </Card>
+
       </motion.div>
     </div>
-  )
+  );
 }

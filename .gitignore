@@ -33,3 +33,6 @@ backend/instance
 backend/instance/*
 backend/uploads/
 backend/uploads/*
+
+chroma-data/
+chroma-data/*

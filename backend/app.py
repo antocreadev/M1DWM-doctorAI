@@ -14,6 +14,7 @@ import string
 import uuid
 import os
 from werkzeug.utils import secure_filename
+from ollama import pull, chat, ResponseError
 
 
 # Configuration de base
@@ -22,6 +23,15 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["JWT_SECRET_KEY"] = "secret"
 app.config["UPLOAD_FOLDER"] = "uploads"
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+model_name = "tinyllama"
+# Pull du modèle
+try:
+    print(f"Téléchargement du modèle '{model_name}'...")
+    pull(model_name)
+    print("✅ Modèle téléchargé avec succès.")
+except ResponseError as e:
+    print(f"❌ Erreur lors du téléchargement : {e.error}")
+    exit(1)
 
 # Swagger
 swagger = Swagger(
@@ -459,7 +469,6 @@ def supprimer_conversation(id):
 
 
 @app.route("/conversations", methods=["GET"])
-@jwt_required()
 def lister_conversations():
     """
     Lister les conversations de l'utilisateur
