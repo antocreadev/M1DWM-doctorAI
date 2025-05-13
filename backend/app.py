@@ -16,6 +16,7 @@ import uuid
 import os
 from werkzeug.utils import secure_filename
 
+
 # Configuration de base
 app = Flask(__name__)
 CORS(app)  # Activation de CORS pour toutes les routes
