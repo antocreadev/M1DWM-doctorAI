@@ -25,14 +25,27 @@ app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
 app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 model_name = "tinyllama"
-# Pull du modèle
+
+# Rendre l'hôte Ollama configurable via variable d'environnement
+ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
+# Variables pour indiquer si Ollama est disponible
+ollama_available = False
+
+# Pull du modèle de manière plus robuste
 try:
+    print(f"Tentative de connexion à Ollama sur {ollama_host}...")
+    # Si vous avez un moyen de configurer l'hôte Ollama dans votre client
+    # Configurez-le ici, par exemple: configure_ollama_client(host=ollama_host)
+    
     print(f"Téléchargement du modèle '{model_name}'...")
     pull(model_name)
     print("✅ Modèle téléchargé avec succès.")
-except ResponseError as e:
-    print(f"❌ Erreur lors du téléchargement : {e.error}")
-    exit(1)
+    ollama_available = True
+except Exception as e:
+    print(f"⚠️ Impossible d'initialiser Ollama: {e}")
+    print("L'application continuera sans les fonctionnalités d'IA...")
+    # Ne pas exit(1) ici, laissez l'application continuer
 
 # Swagger
 swagger = Swagger(

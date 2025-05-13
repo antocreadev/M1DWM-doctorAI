@@ -64,3 +64,4 @@ jobs:
         env_vars: |
           ENVIRONMENT=production
           GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }}
+          OLLAMA_HOST=https://ollama-gemma-bv5bumqn3a-ew.a.run.app
