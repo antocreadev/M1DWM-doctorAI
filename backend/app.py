@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, json, request, jsonify, send_from_directory
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
@@ -14,6 +15,14 @@ import uuid
 import os
 from werkzeug.utils import secure_filename
 
+#chatbot
+import requests
+import fitz  # PyMuPDF
+import requests
+from PyPDF2 import PdfReader
+
+
+
 # Config de base
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
@@ -26,6 +35,7 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+CORS(app)
 ### MODELES ###
 
 
@@ -124,7 +134,7 @@ def me():
 
 ### UPLOAD FICHIERS ###
 @app.route("/upload", methods=["POST"])
-@jwt_required()
+
 def upload_file():
     if "file" not in request.files:
         return jsonify(message="Aucun fichier envoyé"), 400
@@ -236,6 +246,101 @@ def lister_messages(id):
 def init_db():
     db.create_all()
     print("Base de données initialisée.")
+
+
+
+####chatbot
+
+OLLAMA_API_URL = "http://localhost:11434/api/chat"
+
+
+
+@app.route("/chat", methods=["POST"])
+def upload_pdf():
+    data = request.get_json()
+    user_message = data.get("text", "")
+
+    # Envoi du message à Ollama
+    payload = {
+        "model": "tinyllama",  # Modèle TinyLlama
+        "messages": [{"role": "user", "content": user_message}]
+    }
+    
+    # Envoyer la requête en mode stream
+    response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
+
+    # Liste pour stocker les parties de la réponse
+    full_reply = []
+
+    # Lire chaque ligne de la réponse
+    for line in response.iter_lines():
+        if line:
+            try:
+                # Décoder chaque ligne JSON
+                data = json.loads(line.decode('utf-8'))
+                # Ajouter le contenu de la réponse du bot à la liste
+                bot_reply = data.get("message", {}).get("content", "")
+                if bot_reply:
+                    full_reply.append(bot_reply)
+            except json.JSONDecodeError:
+                print("Erreur lors du décodage du JSON:", line)
+
+    # Joindre toutes les parties de la réponse pour obtenir la réponse complète
+    final_reply = " ".join(full_reply)
+
+    # Si aucune réponse n'a été trouvée
+    if not final_reply:
+        return jsonify({"error": "No valid reply from the model"}), 500
+    
+    return jsonify({"summary": final_reply})
+
+@app.route("/uploadpdf", methods=["POST"])
+def analyze_pdf():
+    if "file" not in request.files:
+        return jsonify({"error": "Aucun fichier envoyé"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "Fichier non sélectionné"}), 400
+
+    # Sauvegarde temporaire du fichier
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)
+
+    # Extraction du texte du PDF
+    try:
+        reader = PdfReader(file_path)
+        text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+    except Exception as e:
+        return jsonify({"error": f"Erreur de lecture du PDF: {str(e)}"}), 500
+
+    # Appel à Ollama avec le texte extrait
+    payload = {
+        "model": "tinyllama",
+        "messages": [{
+            "role": "user",
+            "content": f"Voici un rapport médical. Donne-moi une synthèse claire pour un patient : {text}"
+        }]
+    }
+
+    response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
+
+    full_reply = []
+    for line in response.iter_lines():
+        if line:
+            try:
+                data = json.loads(line.decode("utf-8"))
+                content = data.get("message", {}).get("content", "")
+                if content:
+                    full_reply.append(content)
+            except json.JSONDecodeError:
+                continue
+
+    final_summary = " ".join(full_reply)
+    return jsonify({"summary": final_summary})
+
+
+
 
 
 ### LANCEMENT ###
