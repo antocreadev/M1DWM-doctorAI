@@ -2,7 +2,7 @@ name: Build and Deploy Frontend
 
 on:
   push:
-    branches: [ test-CI/CD ]
+    branches: [ test-CI/CD ]  # Ajout de main comme branche de déclenchement
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'
@@ -56,6 +56,7 @@ jobs:
         service: mediassist-frontend
         image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }}
         region: ${{ secrets.GCP_REGION }}
+        service_account_email: cloudrun-service-account@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
         env_vars: |
           NODE_ENV=production
-          NEXT_PUBLIC_API_URL=https://mediassist-backend-<unique-id>.run.app
+          NEXT_PUBLIC_API_URL=https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app

@@ -2,7 +2,7 @@ name: Build and Deploy Backend
 
 on:
   push:
-    branches: [ test-CI/CD ]
+    branches: [ test-CI/CD ]  # Ajout de main comme branche de déclenchement
     paths:
       - 'backend/**'
       - '.github/workflows/backend.yml'
@@ -54,9 +54,11 @@ jobs:
     - name: Deploy to Cloud Run
       uses: google-github-actions/deploy-cloudrun@v1
       with:
-        service: mediassist-backend
+        service: mediassist-backend-with-sql
         image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/backend:${{ github.sha }}
         region: ${{ secrets.GCP_REGION }}
+        cloudsql_instances: ${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:mediassist-db
+        service_account_email: cloudrun-service-account@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
         env_vars: |
           ENVIRONMENT=production
           GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }}
