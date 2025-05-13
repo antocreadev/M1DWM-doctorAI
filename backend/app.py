@@ -15,7 +15,9 @@ import random
 import string
 import uuid
 from werkzeug.utils import secure_filename
-from ollama import pull, chat, ResponseError
+from ollama import pull, chat, ResponseError, Client
+import requests
+
 
 
 # Configuration de base
@@ -32,20 +34,25 @@ ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 # Variables pour indiquer si Ollama est disponible
 ollama_available = False
 
-# Pull du modèle de manière plus robuste
+# Pull du modèle avec une requête POST directe
 try:
     print(f"Tentative de connexion à Ollama sur {ollama_host}...")
-    # Si vous avez un moyen de configurer l'hôte Ollama dans votre client
-    # Configurez-le ici, par exemple: configure_ollama_client(host=ollama_host)
+    
+    # Utiliser requests pour envoyer une requête POST
+    pull_url = f"{ollama_host}/api/pull"
+    pull_data = {"name": model_name}
     
     print(f"Téléchargement du modèle '{model_name}'...")
-    pull(model_name)
+    
+    response = requests.post(pull_url, json=pull_data)
+    response.raise_for_status()  # Lever une exception si la réponse n'est pas 2xx
+    
     print("✅ Modèle téléchargé avec succès.")
     ollama_available = True
+    
 except Exception as e:
     print(f"⚠️ Impossible d'initialiser Ollama: {e}")
     print("L'application continuera sans les fonctionnalités d'IA...")
-    # Ne pas exit(1) ici, laissez l'application continuer
 
 # Swagger
 swagger = Swagger(

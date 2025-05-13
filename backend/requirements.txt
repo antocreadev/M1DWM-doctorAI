@@ -11,3 +11,4 @@ flasgger
 flask-cors
 ollama
 pg8000
+requests
