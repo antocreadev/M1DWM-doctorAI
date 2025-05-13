@@ -21,7 +21,13 @@ import logging
 
 # Configuration de base
 app = Flask(__name__)
-CORS(app)
+
+CORS(app, resources={r"/*": {
+    "origins": ["https://mediassist-frontend-bv5bumqn3a-ew.a.run.app", "http://localhost:3000"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+    "supports_credentials": True
+}})
 
 # Configuration de la base de données PostgreSQL avec Cloud SQL
 DB_USER = os.environ.get('DB_USER', 'postgres')
@@ -720,15 +726,22 @@ def health_check():
     })
 
 
-# Initialisation de la base de données
-@app.before_first_request
-def initialize_database():
-    """Crée les tables de la base de données si elles n'existent pas"""
+# à l'intérieur d'un contexte d'application
+with app.app_context():
     try:
         db.create_all()
         app.logger.info("Base de données initialisée avec succès.")
     except Exception as e:
         app.logger.error(f"Erreur lors de l'initialisation de la base de données: {str(e)}")
+
+# Alternativement, créez une route dédiée pour initialiser la base de données
+@app.route('/init-db', methods=['GET'])
+def init_db():
+    try:
+        db.create_all()
+        return jsonify({"status": "success", "message": "Base de données initialisée."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == "__main__":
