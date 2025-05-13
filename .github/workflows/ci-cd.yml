@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master, dev, development ]
+    branches: [ main, master, dev, development, tests-ci-frontend ]
   pull_request:
     branches: [ main, master ]
 
