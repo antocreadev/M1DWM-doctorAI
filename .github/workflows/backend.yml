@@ -60,6 +60,7 @@ jobs:
         region: ${{ secrets.GCP_REGION }}
         cloudsql_instances: ${{ secrets.GCP_PROJECT_ID }}:${{ secrets.GCP_REGION }}:mediassist-db
         service_account_email: cloudrun-service-account@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+        allow_unauthenticated: true
         env_vars: |
           ENVIRONMENT=production
           GOOGLE_CLOUD_PROJECT=${{ secrets.GCP_PROJECT_ID }}
