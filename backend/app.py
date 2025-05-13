@@ -22,19 +22,14 @@ import logging
 # Configuration de base
 app = Flask(__name__)
 
-CORS(app, resources={r"/*": {
-    "origins": ["https://mediassist-frontend-bv5bumqn3a-ew.a.run.app", "http://localhost:3000"],
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-    "supports_credentials": True
-}})
+CORS(app)
 
 # Configuration de la base de données PostgreSQL avec Render.com
 DB_USER = 'doctorai_a7k3_user'
 DB_PASS = '1aMtKSIUISaEIhutbx41MXohsXglXXyF'
 DB_NAME = 'doctorai_a7k3'
 DB_HOST = 'dpg-d0hpkk15pdvs739c3640-a.oregon-postgres.render.com'
-DB_PORT = '5432'
+DB_PORT = '5432' 
 
 # Configuration JWT et dossier d'upload
 app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg=')
