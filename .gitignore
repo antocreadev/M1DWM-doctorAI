@@ -112,3 +112,4 @@ backend/uploads/*
 
 chroma-data/
 chroma-data/*
+terraform/github-key.json
