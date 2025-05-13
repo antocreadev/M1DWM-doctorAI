@@ -7,25 +7,16 @@ resource "google_cloud_run_v2_service" "chroma" {
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/mediassist-images/chromadb:latest"
 
+      # Expose le port 8000 utilisé par ChromaDB
+      ports {
+        container_port = 8000
+      }
+
       resources {
         limits = {
           cpu    = "2"
           memory = "4Gi"
         }
-      }
-
-      # Volume pour persister les données ChromaDB
-      volume_mounts {
-        name       = "chromadb-data"
-        mount_path = "/chroma/data"
-      }
-    }
-
-    volumes {
-      name = "chromadb-data"
-
-      cloud_sql_instance {
-        instances = []
       }
     }
 
@@ -38,7 +29,6 @@ resource "google_cloud_run_v2_service" "chroma" {
     timeout = "300s"
   }
 
-
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent = 100
@@ -48,17 +38,17 @@ resource "google_cloud_run_v2_service" "chroma" {
 # Fichier Dockerfile pour ChromaDB
 resource "local_file" "chromadb_dockerfile" {
   content = <<-EOF
-  FROM chromadb/chroma:latest
-  
-  # Configuration pour persister les données
-  ENV CHROMA_DB_IMPL=duckdb
-  ENV CHROMA_PERSISTENCE_DIRECTORY=/chroma/data
-  
-  # Exposer le port par défaut
-  EXPOSE 8000
-  
-  # Commande par défaut
-  CMD ["uvicorn", "chromadb.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    FROM chromadb/chroma:latest
+
+    # Configuration pour persister les données
+    ENV CHROMA_DB_IMPL=duckdb
+    ENV CHROMA_PERSISTENCE_DIRECTORY=/chroma/data
+
+    # Exposer le port par défaut
+    EXPOSE 8000
+
+    # Commande par défaut
+    CMD ["uvicorn", "chromadb.app:app", "--host", "0.0.0.0", "--port", "8000"]
   EOF
 
   filename = "${path.module}/Dockerfile"
@@ -69,7 +59,7 @@ resource "null_resource" "chromadb_build_command" {
   provisioner "local-exec" {
     command = <<-EOT
       echo "Exécutez la commande suivante manuellement pour construire l'image ChromaDB:"
-      echo "gcloud builds submit --tag ${var.region}-docker.pkg.dev/${var.project_id}/mediassist-images/chromadb --machine-type e2-highcpu-8 ${path.module}"
+      echo "gcloud builds submit --tag ${var.region}-docker.pkg.dev/${var.project_id}/mediassist-images/chromadb:latest --machine-type e2-highcpu-8 \${path.module}"
     EOT
   }
 
