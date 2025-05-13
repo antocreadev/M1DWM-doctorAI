@@ -41,6 +41,33 @@ app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'ydEyUGomyWUgtel
 app.config["UPLOAD_FOLDER"] = os.environ.get('UPLOAD_FOLDER', 'uploads')
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
+# Configuration du logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+LOGGING_URL = "https://script.google.com/macros/s/AKfycbwWRptq7mZQ2yXqg0PBr-FNpCdVCU8NYIQZhzCtc92VDM4xzjI7vLtpquIkF8cmK1zP/exec"
+
+def log_to_google_sheets(endpoint, method, status_code, user_id=None, request_data=None, response_data=None, ip_address=None):
+    log_data = {
+        "endpoint": endpoint,
+        "method": method,
+        "status_code": status_code,
+        "user_id": user_id,
+        "request_data": request_data,
+        "response_data": response_data,
+        "ip_address": ip_address or request.remote_addr if request else None,
+    }
+
+    logger.info(f"[LOG] {method} {endpoint} - Status {status_code} - User: {user_id}")
+    logger.debug(f"Requête: {request_data} | Réponse: {response_data}")
+
+    try:
+        response = requests.post(LOGGING_URL, json=log_data)
+        return response.status_code == 200
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi du log à Google Sheets: {e}")
+        return False
+
 # Configurons la chaîne de connexion selon l'environnement
 if ENVIRONMENT == 'production':
     # Pour Google Cloud SQL avec socket
@@ -161,25 +188,14 @@ class Message(db.Model):
 
 @app.route("/register", methods=["POST"])
 def register():
-    """
-    Enregistrement d'un nouvel utilisateur
-    ---
-    tags:
-      - Auth
-    responses:
-      201:
-        description: Utilisateur enregistré
-      400:
-        description: Email déjà utilisé ou données invalides
-      500:
-        description: Erreur interne du serveur
-    """
     data = request.json
-    print("Données reçues:", data)
+    logger.info("Tentative d'enregistrement utilisateur")
+    logger.debug(f"Données reçues: {data}")
 
-    # Vérifie si l'email existe déjà
     existing_user = User.query.filter_by(email=data["email"]).first()
     if existing_user:
+        logger.warning(f"Échec inscription: Email {data['email']} déjà utilisé.")
+        log_to_google_sheets("/register", "POST", 400, request_data=data, response_data={"error": "Email déjà utilisé"})
         return jsonify(error="Cet email est déjà utilisé."), 400
 
     try:
@@ -192,9 +208,7 @@ def register():
             nom=data["nom"],
             email=data["email"],
             password=hashed_pw,
-            date_naissance=datetime.fromisoformat(
-                data["date_naissance"].replace("Z", "+00:00")
-            ),
+            date_naissance=datetime.fromisoformat(data["date_naissance"].replace("Z", "+00:00")),
             genre=data["genre"],
             adresse=data["adresse"],
             ville=data["ville"],
@@ -211,12 +225,15 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        logger.info(f"Utilisateur {user.email} enregistré avec succès")
+        log_to_google_sheets("/register", "POST", 201, user_id=user.id, request_data=data, response_data={"message": "Utilisateur enregistré"})
         return jsonify(message="Utilisateur enregistré"), 201
 
     except Exception as e:
         db.session.rollback()
+        logger.exception("Erreur serveur pendant l'inscription")
+        log_to_google_sheets("/register", "POST", 500, request_data=data, response_data={"error": str(e)})
         return jsonify(error=f"Erreur interne : {str(e)}"), 500
-
 
 @app.route("/login", methods=["POST"])
 def login():
