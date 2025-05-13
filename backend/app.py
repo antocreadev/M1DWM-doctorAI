@@ -27,7 +27,7 @@ CORS(app)
 DB_USER = os.environ.get('DB_USER', 'postgres')
 DB_PASS = os.environ.get('DB_PASS', 'mediassist123')
 DB_NAME = os.environ.get('DB_NAME', 'mediassist')
-INSTANCE_CONNECTION_NAME = os.environ.get('INSTANCE_CONNECTION_NAME', 'your-project:your-region:mediassist-db')
+INSTANCE_CONNECTION_NAME = os.environ.get('INSTANCE_CONNECTION_NAME', 'mediassist-prod:us-central1:mediassist-db')
 ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
 
 # Configuration JWT et dossier d'upload
