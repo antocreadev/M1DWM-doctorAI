@@ -2,3 +2,8 @@ flask
 flask_sqlalchemy
 flask_bcrypt
 flask_jwt_extended
+psycopg2-binary
+google-cloud-secret-manager
+chromadb
+requests
+gunicorn

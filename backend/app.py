@@ -7,24 +7,27 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity,
 )
+import config
+import os
 from datetime import datetime
 import random
 import string
 import uuid
-import os
 from werkzeug.utils import secure_filename
 
 # Config de base
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
-app.config["JWT_SECRET_KEY"] = "secret"
-app.config["UPLOAD_FOLDER"] = "uploads"
+app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
+app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
+app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
 
 # Extensions
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
+
 
 ### MODELES ###
 
