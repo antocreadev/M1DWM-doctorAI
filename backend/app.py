@@ -223,9 +223,36 @@ def me():
 
 
 ### UPLOAD FICHIERS ###
+
+
 @app.route("/upload", methods=["POST"])
 @jwt_required()
 def upload_file():
+    """
+    Télécharger un fichier
+    ---
+    tags:
+      - Fichiers
+    security:
+      - Bearer: []
+    parameters:
+      - in: formData
+        name: file
+        type: file
+        required: true
+        description: Fichier à téléverser
+    responses:
+      201:
+        description: Fichier téléversé
+        schema:
+          type: object
+          properties:
+            message: {type: string}
+            nom: {type: string}
+            chemin: {type: string}
+      400:
+        description: Erreur de validation
+    """
     if "file" not in request.files:
         return jsonify(message="Aucun fichier envoyé"), 400
     file = request.files["file"]
@@ -245,12 +272,50 @@ def upload_file():
 @app.route("/fichiers/<filename>", methods=["GET"])
 @jwt_required()
 def telecharger_fichier(filename):
+    """
+    Télécharger un fichier
+    ---
+    tags:
+      - Fichiers
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: filename
+        type: string
+        required: true
+        description: Nom du fichier à télécharger
+    responses:
+      200:
+        description: Fichier téléchargé
+      404:
+        description: Fichier non trouvé
+    """
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
 @app.route("/fichiers/<int:id>", methods=["DELETE"])
 @jwt_required()
 def supprimer_fichier(id):
+    """
+    Supprimer un fichier
+    ---
+    tags:
+      - Fichiers
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: id
+        type: integer
+        required: true
+        description: ID du fichier à supprimer
+    responses:
+      200:
+        description: Fichier supprimé
+      404:
+        description: Fichier non trouvé
+    """
     f = File.query.get_or_404(id)
     try:
         os.remove(f.chemin)
@@ -264,15 +329,59 @@ def supprimer_fichier(id):
 @app.route("/fichiers", methods=["GET"])
 @jwt_required()
 def lister_fichiers():
+    """
+    Lister les fichiers de l'utilisateur
+    ---
+    tags:
+      - Fichiers
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Liste des fichiers
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer}
+              nom: {type: string}
+              chemin: {type: string}
+    """
     user_id = get_jwt_identity()
     fichiers = File.query.filter_by(user_id=user_id).all()
     return jsonify([{"id": f.id, "nom": f.nom, "chemin": f.chemin} for f in fichiers])
 
 
 ### CONVERSATIONS ###
+
+
 @app.route("/conversations", methods=["POST"])
 @jwt_required()
 def creer_conversation():
+    """
+    Créer une nouvelle conversation
+    ---
+    tags:
+      - Conversations
+    security:
+      - Bearer: []
+    parameters:
+      - in: body
+        name: conversation
+        schema:
+          type: object
+          properties:
+            titre: {type: string}
+    responses:
+      201:
+        description: Conversation créée
+        schema:
+          type: object
+          properties:
+            id: {type: integer}
+            titre: {type: string}
+    """
     user_id = get_jwt_identity()
     data = request.json
     c = Conversation(titre=data.get("titre", "Nouvelle conversation"), user_id=user_id)
@@ -284,6 +393,30 @@ def creer_conversation():
 @app.route("/conversations/<int:id>/messages", methods=["POST"])
 @jwt_required()
 def ajouter_message(id):
+    """
+    Ajouter un message à une conversation
+    ---
+    tags:
+      - Conversations
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: id
+        type: integer
+        required: true
+        description: ID de la conversation
+      - in: body
+        name: message
+        schema:
+          type: object
+          required: [contenu]
+          properties:
+            contenu: {type: string}
+    responses:
+      200:
+        description: Message ajouté avec réponse IA
+    """
     data = request.json
     message_user = Message(contenu=data["contenu"], role="user", conversation_id=id)
     message_ai = Message(
@@ -299,6 +432,25 @@ def ajouter_message(id):
 @app.route("/conversations/<int:id>", methods=["DELETE"])
 @jwt_required()
 def supprimer_conversation(id):
+    """
+    Supprimer une conversation
+    ---
+    tags:
+      - Conversations
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: id
+        type: integer
+        required: true
+        description: ID de la conversation à supprimer
+    responses:
+      200:
+        description: Conversation supprimée
+      404:
+        description: Conversation non trouvée
+    """
     conv = Conversation.query.get_or_404(id)
     db.session.delete(conv)
     db.session.commit()
@@ -308,6 +460,24 @@ def supprimer_conversation(id):
 @app.route("/conversations", methods=["GET"])
 @jwt_required()
 def lister_conversations():
+    """
+    Lister les conversations de l'utilisateur
+    ---
+    tags:
+      - Conversations
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Liste des conversations
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer}
+              titre: {type: string}
+    """
     user_id = get_jwt_identity()
     convs = Conversation.query.filter_by(user_id=user_id).all()
     return jsonify([{"id": c.id, "titre": c.titre} for c in convs])
@@ -316,11 +486,37 @@ def lister_conversations():
 @app.route("/conversations/<int:id>/messages", methods=["GET"])
 @jwt_required()
 def lister_messages(id):
+    """
+    Lister les messages d'une conversation
+    ---
+    tags:
+      - Conversations
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: id
+        type: integer
+        required: true
+        description: ID de la conversation
+    responses:
+      200:
+        description: Liste des messages
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              role: {type: string}
+              contenu: {type: string}
+    """
     conv = Conversation.query.get_or_404(id)
     return jsonify([{"role": m.role, "contenu": m.contenu} for m in conv.messages])
 
 
 ### INIT DB ###
+
+
 @app.cli.command("init-db")
 def init_db():
     db.create_all()
@@ -328,5 +524,6 @@ def init_db():
 
 
 ### LANCEMENT ###
+
 if __name__ == "__main__":
     app.run(debug=True)

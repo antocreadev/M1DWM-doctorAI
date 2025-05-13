@@ -32,6 +32,14 @@ flask init-db
 flask run
 ```
 
+#### Swagger
+
+Ouvrir l'URL suivante dans le navigateur :
+
+```
+http://127.0.0.1:5000/apidocs/
+```
+
 
 # Lancer le frontend
 
