@@ -31,3 +31,19 @@ flask init-db
 ```bash
 flask run
 ```
+
+
+# Lancer le frontend
+
+```bash
+cd frontend
+```
+
+```bash
+bun i
+```
+
+
+```bash
+bun dev
+```
