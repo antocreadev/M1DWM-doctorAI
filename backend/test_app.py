@@ -98,7 +98,7 @@ class FlaskAppTestCase(unittest.TestCase):
         # D'abord se connecter
         token = self.test_login()
         
-        # Accéder au profil
+        # Accéder au profil - CORRECTION: Format correct du header Bearer
         response = self.app.get(
             '/me',
             headers={'Authorization': f'Bearer {token}'}
@@ -114,6 +114,7 @@ class FlaskAppTestCase(unittest.TestCase):
         """Test du flux complet pour les conversations"""
         # D'abord se connecter
         token = self.test_login()
+        # CORRECTION: Format correct du header Bearer
         headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
         
         # 1. Créer une conversation
@@ -160,6 +161,7 @@ class FlaskAppTestCase(unittest.TestCase):
         """Test d'upload et de gestion de fichiers"""
         # D'abord se connecter
         token = self.test_login()
+        # CORRECTION: Format correct du header Bearer
         headers = {'Authorization': f'Bearer {token}'}
         
         # Créer un fichier temporaire
