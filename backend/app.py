@@ -7,6 +7,7 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity,
 )
+from flasgger import Swagger
 from datetime import datetime
 import random
 import string
@@ -14,12 +15,34 @@ import uuid
 import os
 from werkzeug.utils import secure_filename
 
-# Config de base
+# Configuration de base
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["JWT_SECRET_KEY"] = "secret"
 app.config["UPLOAD_FOLDER"] = "uploads"
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+# Swagger
+swagger = Swagger(
+    app,
+    template={
+        "swagger": "2.0",
+        "info": {
+            "title": "API Utilisateurs & Conversations",
+            "description": "API Flask avec authentification, gestion de fichiers et conversations.",
+            "version": "1.0.0",
+        },
+        "basePath": "/",
+        "securityDefinitions": {
+            "Bearer": {
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header",
+                "description": "JWT Authorization header using the Bearer scheme. Exemple : 'Authorization: Bearer {token}'",
+            }
+        },
+    },
+)
 
 # Extensions
 db = SQLAlchemy(app)
@@ -53,8 +76,8 @@ class User(db.Model):
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    nom = db.Column(db.String(100))  # nom UUID
-    chemin = db.Column(db.String(200))  # chemin relatif
+    nom = db.Column(db.String(100))
+    chemin = db.Column(db.String(200))
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
 
@@ -79,6 +102,40 @@ class Message(db.Model):
 
 @app.route("/register", methods=["POST"])
 def register():
+    """
+    Enregistrement d'un nouvel utilisateur
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: utilisateur
+        schema:
+          type: object
+          required: [prenom, nom, email, password, date_naissance, genre, adresse, ville, code_postal, telephone, profession, terms, data]
+          properties:
+            prenom: {type: string}
+            nom: {type: string}
+            email: {type: string}
+            password: {type: string}
+            date_naissance: {type: string, format: date}
+            genre: {type: string}
+            adresse: {type: string}
+            ville: {type: string}
+            code_postal: {type: string}
+            telephone: {type: string}
+            profession: {type: string}
+            terms: {type: boolean}
+            data: {type: boolean}
+            antecedents: {type: string}
+            medicaments: {type: string}
+            allergies: {type: string}
+    responses:
+      201:
+        description: Utilisateur enregistré
+      400:
+        description: Erreur de validation
+    """
     data = request.json
     hashed_pw = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
     user = User(
@@ -106,6 +163,30 @@ def register():
 
 @app.route("/login", methods=["POST"])
 def login():
+    """
+    Connexion utilisateur
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: credentials
+        schema:
+          type: object
+          required: [email, password]
+          properties:
+            email: {type: string}
+            password: {type: string}
+    responses:
+      200:
+        description: Connexion réussie
+        schema:
+          type: object
+          properties:
+            token: {type: string}
+      401:
+        description: Identifiants invalides
+    """
     data = request.json
     user = User.query.filter_by(email=data["email"]).first()
     if user and bcrypt.check_password_hash(user.password, data["password"]):
@@ -115,9 +196,28 @@ def login():
 
 
 ### ROUTES UTILISATEUR ###
+
+
 @app.route("/me", methods=["GET"])
 @jwt_required()
 def me():
+    """
+    Récupérer les informations du profil utilisateur connecté
+    ---
+    tags:
+      - Utilisateur
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: Infos utilisateur
+        schema:
+          type: object
+          properties:
+            email: {type: string}
+            nom: {type: string}
+            prenom: {type: string}
+    """
     user = User.query.get(get_jwt_identity())
     return jsonify(email=user.email, nom=user.nom, prenom=user.prenom)
 
@@ -128,36 +228,26 @@ def me():
 def upload_file():
     if "file" not in request.files:
         return jsonify(message="Aucun fichier envoyé"), 400
-
     file = request.files["file"]
     if file.filename == "":
         return jsonify(message="Nom de fichier vide"), 400
-
-    if file:
-        ext = os.path.splitext(file.filename)[1]
-        filename_uuid = f"{uuid.uuid4()}{ext}"
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename_uuid)
-        file.save(filepath)
-
-        user_id = get_jwt_identity()
-        fichier = File(nom=filename_uuid, chemin=filepath, user_id=user_id)
-        db.session.add(fichier)
-        db.session.commit()
-
-        return (
-            jsonify(message="Fichier téléversé", nom=filename_uuid, chemin=filepath),
-            201,
-        )
+    ext = os.path.splitext(file.filename)[1]
+    filename_uuid = f"{uuid.uuid4()}{ext}"
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename_uuid)
+    file.save(filepath)
+    user_id = get_jwt_identity()
+    fichier = File(nom=filename_uuid, chemin=filepath, user_id=user_id)
+    db.session.add(fichier)
+    db.session.commit()
+    return jsonify(message="Fichier téléversé", nom=filename_uuid, chemin=filepath), 201
 
 
-### ROUTE POUR TÉLÉCHARGER UN FICHIER ###
 @app.route("/fichiers/<filename>", methods=["GET"])
 @jwt_required()
 def telecharger_fichier(filename):
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
-### SUPPRIMER UN FICHIER ###
 @app.route("/fichiers/<int:id>", methods=["DELETE"])
 @jwt_required()
 def supprimer_fichier(id):
@@ -171,7 +261,6 @@ def supprimer_fichier(id):
     return jsonify(message="Fichier supprimé")
 
 
-### LISTER LES FICHIERS D’UN UTILISATEUR ###
 @app.route("/fichiers", methods=["GET"])
 @jwt_required()
 def lister_fichiers():
