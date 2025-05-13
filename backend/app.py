@@ -29,17 +29,21 @@ CORS(app, resources={r"/*": {
     "supports_credentials": True
 }})
 
-# Configuration de la base de données PostgreSQL avec Cloud SQL
-DB_USER = os.environ.get('DB_USER', 'postgres')
-DB_PASS = os.environ.get('DB_PASS', 'mediassist123')
-DB_NAME = os.environ.get('DB_NAME', 'mediassist')
-INSTANCE_CONNECTION_NAME = os.environ.get('INSTANCE_CONNECTION_NAME', 'mediassist-prod:us-central1:mediassist-db')
-ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
+# Configuration de la base de données PostgreSQL avec Render.com
+DB_USER = 'doctorai_a7k3_user'
+DB_PASS = '1aMtKSIUISaEIhutbx41MXohsXglXXyF'
+DB_NAME = 'doctorai_a7k3'
+DB_HOST = 'dpg-d0hpkk15pdvs739c3640-a.oregon-postgres.render.com'
+DB_PORT = '5432'
 
 # Configuration JWT et dossier d'upload
 app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg=')
 app.config["UPLOAD_FOLDER"] = os.environ.get('UPLOAD_FOLDER', 'uploads')
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+# Configuration de la connexion à la base de données
+app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO)
@@ -67,19 +71,6 @@ def log_to_google_sheets(endpoint, method, status_code, user_id=None, request_da
     except Exception as e:
         logger.error(f"Erreur lors de l'envoi du log à Google Sheets: {e}")
         return False
-
-# Configurons la chaîne de connexion selon l'environnement
-if ENVIRONMENT == 'production':
-    # Pour Google Cloud SQL avec socket
-    socket_dir = "/cloudsql"
-    postgres_uri = f"postgresql://{DB_USER}:{DB_PASS}@/{DB_NAME}?host={socket_dir}/{INSTANCE_CONNECTION_NAME}"
-    app.config["SQLALCHEMY_DATABASE_URI"] = postgres_uri
-    app.logger.info(f"Connecting to Cloud SQL (PostgreSQL) using socket: {INSTANCE_CONNECTION_NAME}")
-else:
-    # Pour le développement local (peut être modifié selon vos besoins)
-    postgres_local_uri = f"postgresql://{DB_USER}:{DB_PASS}@localhost:5432/{DB_NAME}"
-    app.config["SQLALCHEMY_DATABASE_URI"] = postgres_local_uri
-    app.logger.info("Connecting to local PostgreSQL database")
 
 # Rendre l'hôte Ollama configurable via variable d'environnement
 ollama_host = os.environ.get("OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app")
