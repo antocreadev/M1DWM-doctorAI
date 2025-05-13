@@ -32,7 +32,9 @@ os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 model_name = "tinyllama"
 
 # Rendre l'hôte Ollama configurable via variable d'environnement
-ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+ollama_host = os.environ.get(
+    "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app"
+)
 
 # Variables pour indiquer si Ollama est disponible
 ollama_available = False
@@ -40,19 +42,19 @@ ollama_available = False
 # Pull du modèle avec une requête POST directe
 try:
     print(f"Tentative de connexion à Ollama sur {ollama_host}...")
-    
+
     # Utiliser requests pour envoyer une requête POST
     pull_url = f"{ollama_host}/api/pull"
     pull_data = {"name": model_name}
-    
+
     print(f"Téléchargement du modèle '{model_name}'...")
-    
+
     response = requests.post(pull_url, json=pull_data)
     response.raise_for_status()  # Lever une exception si la réponse n'est pas 2xx
-    
+
     print("✅ Modèle téléchargé avec succès.")
     ollama_available = True
-    
+
 except Exception as e:
     print(f"⚠️ Impossible d'initialiser Ollama: {e}")
     print("L'application continuera sans les fonctionnalités d'IA...")
@@ -578,6 +580,8 @@ def lister_messages(id):
 
 
 OLLAMA_API_URL = ollama_host + "/api/chat"
+
+
 @app.route("/chat", methods=["POST"])
 def upload_pdf():
     data = request.get_json()
@@ -585,6 +589,7 @@ def upload_pdf():
 
     # Envoi du message à Ollama
     payload = {
+        "model": model_name,
         "messages": [{"role": "user", "content": user_message}],
     }
 
