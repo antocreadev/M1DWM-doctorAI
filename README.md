@@ -55,3 +55,16 @@ bun i
 ```bash
 bun dev
 ```
+
+
+# Local 
+## Ollama
+```bash
+docker pull ollama/ollama
+docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+```
+## Chroma db 
+```bash
+docker pull chromadb/chroma
+docker run -v ./chroma-data:/data -p 8000:8000 chromadb/chroma
+```
