@@ -9,9 +9,9 @@ terraform {
       version = "~> 5.10.0"
     }
   }
-  
+
   backend "gcs" {
-    bucket = "mediassist-terraform-state"
+    bucket = "mediassist-prod-terraform-state"
     prefix = "terraform/state"
   }
 }

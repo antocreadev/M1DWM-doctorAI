@@ -8,47 +8,41 @@ resource "google_service_account" "ollama_service_account" {
 resource "google_cloud_run_v2_service" "ollama" {
   name     = "ollama-gemma"
   location = var.region
-  
+
   template {
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/mediassist-images/ollama-gemma:latest"
-      
+
       resources {
         limits = {
           cpu    = "8"
           memory = "32Gi"
         }
-        
-        accelerator {
-          type  = "nvidia-l4"
-          count = 1
-        }
       }
-      
+
       env {
         name  = "OLLAMA_NUM_PARALLEL"
         value = "4"
       }
     }
-    
+
     service_account = google_service_account.ollama_service_account.email
-    
+
     scaling {
-      max_instance_count = 7
+      max_instance_count = 0
     }
-    
+
     timeout = "600s"
-    
-    # Désactiver le CPU throttling pour permettre l'utilisation du GPU
+
+    # Pour les GPUs, on utilise des annotations au lieu d'un bloc accelerator
     annotations = {
       "run.googleapis.com/cpu-throttling" = "false"
+      "run.googleapis.com/gpu-type"       = "nvidia-l4"
+      "run.googleapis.com/gpu-count"      = "1"
     }
   }
-  
-  client {
-    max_concurrency = 4
-  }
-  
+
+
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent = 100
@@ -79,7 +73,7 @@ resource "local_file" "ollama_dockerfile" {
   # Démarre Ollama
   ENTRYPOINT ["ollama", "serve"]
   EOF
-  
+
   filename = "${path.module}/Dockerfile"
 }
 
@@ -91,6 +85,6 @@ resource "null_resource" "ollama_build_command" {
       echo "gcloud builds submit --tag ${var.region}-docker.pkg.dev/${var.project_id}/mediassist-images/ollama-gemma --machine-type e2-highcpu-32 ${path.module}"
     EOT
   }
-  
+
   depends_on = [local_file.ollama_dockerfile]
 }

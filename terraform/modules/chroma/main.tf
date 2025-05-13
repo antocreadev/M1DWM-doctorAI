@@ -2,46 +2,43 @@
 resource "google_cloud_run_v2_service" "chroma" {
   name     = "chromadb"
   location = var.region
-  
+
   template {
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/mediassist-images/chromadb:latest"
-      
+
       resources {
         limits = {
           cpu    = "2"
           memory = "4Gi"
         }
       }
-      
+
       # Volume pour persister les données ChromaDB
       volume_mounts {
         name       = "chromadb-data"
         mount_path = "/chroma/data"
       }
     }
-    
+
     volumes {
       name = "chromadb-data"
-      
+
       cloud_sql_instance {
         instances = []
       }
     }
-    
+
     service_account = var.service_account
-    
+
     scaling {
       max_instance_count = 2
     }
-    
+
     timeout = "300s"
   }
-  
-  client {
-    max_concurrency = 80
-  }
-  
+
+
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
     percent = 100
@@ -63,7 +60,7 @@ resource "local_file" "chromadb_dockerfile" {
   # Commande par défaut
   CMD ["uvicorn", "chromadb.app:app", "--host", "0.0.0.0", "--port", "8000"]
   EOF
-  
+
   filename = "${path.module}/Dockerfile"
 }
 
@@ -75,6 +72,6 @@ resource "null_resource" "chromadb_build_command" {
       echo "gcloud builds submit --tag ${var.region}-docker.pkg.dev/${var.project_id}/mediassist-images/chromadb --machine-type e2-highcpu-8 ${path.module}"
     EOT
   }
-  
+
   depends_on = [local_file.chromadb_dockerfile]
 }

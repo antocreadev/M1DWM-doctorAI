@@ -2,23 +2,23 @@ resource "google_sql_database_instance" "instance" {
   name             = "mediassist-db"
   database_version = "POSTGRES_15"
   region           = var.region
-  
+
   settings {
     tier              = var.db_tier
     availability_type = "ZONAL"
-    
+
     backup_configuration {
       enabled            = true
       binary_log_enabled = false
       start_time         = "03:00"
     }
-    
+
     ip_configuration {
       ipv4_enabled = true
       require_ssl  = true
     }
   }
-  
+
   deletion_protection = true
 }
 
