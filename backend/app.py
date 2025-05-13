@@ -8,15 +8,14 @@ from flask_jwt_extended import (
     jwt_required,
     get_jwt_identity,
 )
+import config
+import os
 from flasgger import Swagger
 from datetime import datetime
 import random
 import string
 import uuid
-import os
 from werkzeug.utils import secure_filename
-
-from ollama import pull, chat, ResponseError
 from flask_cors import CORS
 from PyPDF2 import PdfReader
 import requests
@@ -24,34 +23,36 @@ import requests
 
 # Configuration de base
 app = Flask(__name__)
+
 CORS(app)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
-app.config["JWT_SECRET_KEY"] = "secret"
-app.config["UPLOAD_FOLDER"] = "uploads"
+app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
+app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
+app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 model_name = "tinyllama"
+
 # Rendre l'hôte Ollama configurable via variable d'environnement
-ollama_host = os.environ.get(
-    "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app/"
-)
+ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 # Variables pour indiquer si Ollama est disponible
 ollama_available = False
+
+# Pull du modèle avec une requête POST directe
 try:
     print(f"Tentative de connexion à Ollama sur {ollama_host}...")
-
+    
     # Utiliser requests pour envoyer une requête POST
     pull_url = f"{ollama_host}/api/pull"
     pull_data = {"name": model_name}
-
+    
     print(f"Téléchargement du modèle '{model_name}'...")
-
+    
     response = requests.post(pull_url, json=pull_data)
     response.raise_for_status()  # Lever une exception si la réponse n'est pas 2xx
-
+    
     print("✅ Modèle téléchargé avec succès.")
     ollama_available = True
-
+    
 except Exception as e:
     print(f"⚠️ Impossible d'initialiser Ollama: {e}")
     print("L'application continuera sans les fonctionnalités d'IA...")
@@ -78,10 +79,12 @@ swagger = Swagger(
     },
 )
 
+
 # Extensions
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
+
 
 ### MODELES ###
 

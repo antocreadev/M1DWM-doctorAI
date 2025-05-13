@@ -2,8 +2,15 @@ flask
 flask_sqlalchemy
 flask_bcrypt
 flask_jwt_extended
+psycopg2-binary
+google-cloud-secret-manager
+chromadb
+requests
+gunicorn
 flasgger
 flask-cors
 ollama
 requests
 PyPDF2
+pg8000
+requests
