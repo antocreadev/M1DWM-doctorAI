@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   SidebarProvider,
   Sidebar,
@@ -30,6 +30,12 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+
+interface Conversation {
+  id: number;
+  titre: string;
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -37,11 +43,42 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [conversations, setConversations] = useState([
-    { id: 1, title: "Analyse sanguine", date: "12 mai 2025" },
-    { id: 2, title: "Suivi cardiaque", date: "15 mai 2025" },
-    { id: 3, title: "Consultation neurologie", date: "18 mai 2025" },
-  ]);
+  const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    console.log("Token:", token);
+    const fetchUserData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Échec de la récupération des données");
+        }
+
+        const userData = await response.json();
+        setConversations(userData.conversations || []);
+        setLoading(false);
+      } catch (err: unknown) {
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred"
+        );
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   return (
     <SidebarProvider>
@@ -78,7 +115,7 @@ export default function DashboardLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  {conversations.map((conversation) => (
+                  {conversations.map((conversation: Conversation) => (
                     <SidebarMenuItem key={conversation.id}>
                       <SidebarMenuButton
                         asChild
@@ -93,7 +130,7 @@ export default function DashboardLayout({
                       >
                         <Link href={`/dashboard/chat/${conversation.id}`}>
                           <HeartPulse className="h-4 w-4" />
-                          <span>{conversation.title}</span>
+                          <span>{conversation.titre}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -170,7 +207,13 @@ export default function DashboardLayout({
                 className="w-full justify-start border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
                 asChild
               >
-                <Link href="/">
+                <Link
+                  href="/"
+                  onClick={() => {
+                    localStorage.removeItem("token");
+                    router.push("/auth/login");
+                  }}
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Déconnexion
                 </Link>

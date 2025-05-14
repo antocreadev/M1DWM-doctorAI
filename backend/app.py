@@ -1,4 +1,12 @@
-from flask import Flask, request, jsonify, send_from_directory, json
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    send_from_directory,
+    json,
+    send_file,
+    after_this_request,
+)
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import (
@@ -18,12 +26,8 @@ from flask_cors import CORS
 from PyPDF2 import PdfReader
 import requests
 import logging
-
-
-import chromadb
-
-chroma_client = chromadb.Client()
-collection = chroma_client.create_collection(name="my_collection")
+import tempfile
+from google.cloud import storage
 
 
 # Configuration de base
@@ -54,6 +58,12 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # Configuration du logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Configuration de Cloud Storage
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "mediassist-prod")
+BUCKET_NAME = os.environ.get("STORAGE_BUCKET", "mediassist-prod-files")
+storage_client = storage.Client(project=PROJECT_ID)
+bucket = storage_client.bucket(BUCKET_NAME)
 
 LOGGING_URL = "https://script.google.com/macros/s/AKfycbwWRptq7mZQ2yXqg0PBr-FNpCdVCU8NYIQZhzCtc92VDM4xzjI7vLtpquIkF8cmK1zP/exec"
 
@@ -117,6 +127,11 @@ try:
 except Exception as e:
     print(f"⚠️ Impossible d'initialiser Ollama: {e}")
     print("L'application continuera sans les fonctionnalités d'IA...")
+
+import chromadb
+
+chroma_client = chromadb.Client()
+collection = chroma_client.create_collection(name="my_collection")
 
 # Swagger
 swagger = Swagger(
@@ -333,6 +348,9 @@ def me():
     """
     user = User.query.get(get_jwt_identity())
     # renvoie toutes les informations
+    if not user:
+        print("Utilisateur non trouvé")
+        return jsonify(message="Utilisateur non trouvé"), 404
     return jsonify(
         id=user.id,
         prenom=user.prenom,
@@ -364,7 +382,7 @@ def me():
 @jwt_required()
 def upload_file():
     """
-    Télécharger un fichier
+    Télécharger un fichier vers Cloud Storage
     ---
     tags:
       - Fichiers
@@ -393,22 +411,45 @@ def upload_file():
     file = request.files["file"]
     if file.filename == "":
         return jsonify(message="Nom de fichier vide"), 400
+
+    # Générer un nom unique pour le fichier
     ext = os.path.splitext(file.filename)[1]
     filename_uuid = f"{uuid.uuid4()}{ext}"
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename_uuid)
-    file.save(filepath)
-    user_id = get_jwt_identity()
-    fichier = File(nom=filename_uuid, chemin=filepath, user_id=user_id)
-    db.session.add(fichier)
-    db.session.commit()
-    return jsonify(message="Fichier téléversé", nom=filename_uuid, chemin=filepath), 201
+
+    # Télécharger sur Cloud Storage
+    try:
+        # Créer un fichier temporaire
+        with tempfile.NamedTemporaryFile() as temp:
+            file.save(temp.name)
+            temp.flush()
+
+            # Télécharger vers Cloud Storage
+            blob = bucket.blob(f"uploads/{filename_uuid}")
+            blob.upload_from_filename(temp.name)
+
+            # Générer l'URL publique ou signée
+            gcs_url = f"gs://{BUCKET_NAME}/uploads/{filename_uuid}"
+
+            # Enregistrer dans la base de données
+            user_id = get_jwt_identity()
+            fichier = File(nom=filename_uuid, chemin=gcs_url, user_id=user_id)
+            db.session.add(fichier)
+            db.session.commit()
+
+            return (
+                jsonify(message="Fichier téléversé", nom=filename_uuid, chemin=gcs_url),
+                201,
+            )
+    except Exception as e:
+        app.logger.error(f"Erreur lors du téléchargement sur GCS: {e}")
+        return jsonify(message=f"Erreur: {str(e)}"), 500
 
 
 @app.route("/fichiers/<filename>", methods=["GET"])
 @jwt_required()
 def telecharger_fichier(filename):
     """
-    Télécharger un fichier
+    Télécharger un fichier depuis Cloud Storage
     ---
     tags:
       - Fichiers
@@ -426,7 +467,37 @@ def telecharger_fichier(filename):
       404:
         description: Fichier non trouvé
     """
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+    # Trouver le fichier dans la base de données
+    fichier = File.query.filter_by(nom=filename).first()
+    if not fichier:
+        return jsonify(message="Fichier non trouvé"), 404
+
+    try:
+        # Extraire le nom du blob depuis le chemin GCS (format: gs://bucket/path/to/file)
+        gcs_path = fichier.chemin.replace(f"gs://{BUCKET_NAME}/", "")
+        blob = bucket.blob(gcs_path)
+
+        # Vérifier si le blob existe
+        if not blob.exists():
+            return jsonify(message="Fichier non trouvé sur le stockage"), 404
+
+        # Créer un fichier temporaire pour stocker le contenu
+        with tempfile.NamedTemporaryFile(delete=False) as temp:
+            blob.download_to_filename(temp.name)
+            temp_path = temp.name
+
+        # Envoyer le fichier en réponse
+        return send_file(
+            temp_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype=blob.content_type,
+            # Nettoyer le fichier temporaire après l'envoi
+            after_this_request=lambda _: os.remove(temp_path) or None,
+        )
+    except Exception as e:
+        app.logger.error(f"Erreur lors du téléchargement depuis GCS: {e}")
+        return jsonify(message=f"Erreur: {str(e)}"), 500
 
 
 @app.route("/fichiers/<int:id>", methods=["DELETE"])
@@ -453,12 +524,21 @@ def supprimer_fichier(id):
     """
     f = File.query.get_or_404(id)
     try:
-        os.remove(f.chemin)
+        # Extraire le nom du blob depuis le chemin GCS
+        gcs_path = f.chemin.replace(f"gs://{BUCKET_NAME}/", "")
+        blob = bucket.blob(gcs_path)
+
+        # Supprimer de Cloud Storage
+        if blob.exists():
+            blob.delete()
+
+        # Supprimer de la base de données
+        db.session.delete(f)
+        db.session.commit()
+        return jsonify(message="Fichier supprimé")
     except Exception as e:
-        print(f"Erreur lors de la suppression du fichier physique : {e}")
-    db.session.delete(f)
-    db.session.commit()
-    return jsonify(message="Fichier supprimé")
+        app.logger.error(f"Erreur lors de la suppression du fichier: {e}")
+        return jsonify(message=f"Erreur: {str(e)}"), 500
 
 
 @app.route("/fichiers", methods=["GET"])
@@ -774,6 +854,7 @@ def health_check():
             status: {type: string}
             database: {type: string}
             ollama: {type: string}
+            gcs: {type: string}
     """
     # Vérifier la base de données
     db_status = "ok"
@@ -783,11 +864,20 @@ def health_check():
     except Exception as e:
         db_status = f"error: {str(e)}"
 
+    # Vérifier Cloud Storage
+    gcs_status = "ok"
+    try:
+        # Vérifier si le bucket existe
+        bucket.exists()
+    except Exception as e:
+        gcs_status = f"error: {str(e)}"
+
     return jsonify(
         {
             "status": "running",
             "database": db_status,
             "ollama": "available" if ollama_available else "unavailable",
+            "gcs": gcs_status,
         }
     )
 

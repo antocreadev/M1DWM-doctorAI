@@ -25,6 +25,11 @@ export default function LoginPage() {
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
+    console.log("token:", localStorage.getItem("token"));
+    if (localStorage.getItem("token")) {
+      // Si l'utilisateur est déjà connecté, redirige vers la page d'accueil
+      router.push("/dashboard");
+    }
     console.log("LoginPage mounted");
     return () => {
       console.log("LoginPage unmounted");

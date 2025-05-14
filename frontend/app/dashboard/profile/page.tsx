@@ -1,266 +1,327 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { User, Shield, Bell, Save, Loader2 } from "lucide-react"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Switch } from "@/components/ui/switch"
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LucideUser, FileText, MessageSquare, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User } from "@/stores/data-users";
 
 export default function ProfilePage() {
-  const [isSaving, setIsSaving] = useState(false)
+  const [userData, setUserData] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  // Récupérer les données utilisateur
+  useEffect(() => {
+    console.log("token:", localStorage.getItem("token"));
 
-  const handleSave = () => {
-    setIsSaving(true)
+    if (!localStorage.getItem("token")) {
+      // Rediriger vers la page de connexion si le token n'est pas présent
+      router.push("/auth/login");
+    }
 
-    // Simulate saving
-    setTimeout(() => {
-      setIsSaving(false)
-    }, 1500)
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(
+          "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Erreur lors de la récupération des données utilisateur"
+          );
+        }
+
+        const data = await response.json();
+        setUserData(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Afficher un état de chargement
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+        <span className="ml-2">Chargement des données...</span>
+      </div>
+    );
+  }
+
+  // Afficher un message d'erreur
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Erreur!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Si les données n'ont pas été chargées correctement
+  if (!userData) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div
+          className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
+          <strong className="font-bold">Information!</strong>
+          <span className="block sm:inline">
+            {" "}
+            Aucune donnée utilisateur disponible.
+          </span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 min-w-[80vw]">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-2xl font-bold text-green-900 mb-2">Mon profil</h1>
-        <p className="text-gray-600">Gérez vos informations personnelles et vos préférences.</p>
+    <div className="space-y-6 min-w-[80vw] py-6 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-3xl font-bold text-green-900 mb-2">Mon profil</h1>
+        <p className="text-gray-600">Vos informations personnelles</p>
       </motion.div>
 
       <Tabs defaultValue="personal" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="personal" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
+            <LucideUser className="h-4 w-4" />
             <span className="hidden sm:inline">Informations</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Sécurité</span>
+          <TabsTrigger
+            value="conversations"
+            className="flex items-center gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">Conversations</span>
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Notifications</span>
+          <TabsTrigger value="medical" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Dossier médical</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="personal">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <Card>
               <CardHeader>
                 <CardTitle>Informations personnelles</CardTitle>
-                <CardDescription>Mettez à jour vos informations personnelles.</CardDescription>
+                <CardDescription>Vos informations de profil</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="space-y-2 flex-1">
-                    <Label htmlFor="firstName">Prénom</Label>
-                    <Input id="firstName" defaultValue="Jean" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">
+                      Prénom
+                    </h3>
+                    <p className="text-base font-medium">
+                      {userData.prenom || "Non renseigné"}
+                    </p>
                   </div>
-                  <div className="space-y-2 flex-1">
-                    <Label htmlFor="lastName">Nom</Label>
-                    <Input id="lastName" defaultValue="Dupont" />
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">Nom</h3>
+                    <p className="text-base font-medium">
+                      {userData.nom || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">Email</h3>
+                    <p className="text-base font-medium">
+                      {userData.email || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">
+                      Téléphone
+                    </h3>
+                    <p className="text-base font-medium">
+                      {userData.telephone || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">
+                      Date de naissance
+                    </h3>
+                    <p className="text-base font-medium">
+                      {userData.date_naissance
+                        ? new Date(userData.date_naissance).toLocaleDateString(
+                            "fr-FR"
+                          )
+                        : "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">Genre</h3>
+                    <p className="text-base font-medium">
+                      {userData.genre === "male"
+                        ? "Homme"
+                        : userData.genre === "female"
+                        ? "Femme"
+                        : userData.genre === "other"
+                        ? "Autre"
+                        : userData.genre === "prefer-not-to-say"
+                        ? "Non précisé"
+                        : userData.genre || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">
+                      Profession
+                    </h3>
+                    <p className="text-base font-medium">
+                      {userData.profession || "Non renseigné"}
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="jean.dupont@example.com" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
-                  <Input id="phone" type="tel" defaultValue="+33 6 12 34 56 78" />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="space-y-2 flex-1">
-                    <Label htmlFor="birthdate">Date de naissance</Label>
-                    <Input id="birthdate" type="date" defaultValue="1980-01-15" />
+                <div className="pt-2 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                    Adresse
+                  </h3>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="text-base font-medium">
+                      {userData.adresse || "Non renseigné"}
+                    </p>
+                    {(userData.code_postal || userData.ville) && (
+                      <p className="text-base font-medium mt-1">
+                        {userData.code_postal || ""} {userData.ville || ""}
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-2 flex-1">
-                    <Label htmlFor="gender">Genre</Label>
-                    <Select defaultValue="male">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Homme</SelectItem>
-                        <SelectItem value="female">Femme</SelectItem>
-                        <SelectItem value="other">Autre</SelectItem>
-                        <SelectItem value="prefer-not-to-say">Je préfère ne pas répondre</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">Adresse</Label>
-                  <Textarea id="address" defaultValue="123 Rue de Paris, 75001 Paris" />
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button onClick={handleSave} className="ml-auto bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Enregistrer
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
             </Card>
           </motion.div>
         </TabsContent>
 
-        <TabsContent value="security">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <TabsContent value="conversations">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <Card>
               <CardHeader>
-                <CardTitle>Sécurité</CardTitle>
-                <CardDescription>Gérez votre mot de passe et la sécurité de votre compte.</CardDescription>
+                <CardTitle>Mes conversations</CardTitle>
+                <CardDescription>
+                  Historique de vos conversations
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Mot de passe actuel</Label>
-                  <Input id="current-password" type="password" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">Nouveau mot de passe</Label>
-                  <Input id="new-password" type="password" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirmer le mot de passe</Label>
-                  <Input id="confirm-password" type="password" />
-                </div>
-
-                <div className="space-y-2 pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium">Authentification à deux facteurs</h4>
-                      <p className="text-sm text-gray-500">
-                        Ajoutez une couche de sécurité supplémentaire à votre compte.
-                      </p>
-                    </div>
-                    <Switch />
+              <CardContent>
+                {userData.conversations && userData.conversations.length > 0 ? (
+                  <div className="space-y-4">
+                    {userData.conversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-green-600" />
+                          <p className="font-medium">{conversation.titre}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <p className="text-gray-500 italic">
+                    Aucune conversation enregistrée
+                  </p>
+                )}
               </CardContent>
-              <CardFooter>
-                <Button onClick={handleSave} className="ml-auto bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Enregistrer
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
             </Card>
           </motion.div>
         </TabsContent>
 
-        <TabsContent value="notifications">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <TabsContent value="medical">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <Card>
               <CardHeader>
-                <CardTitle>Notifications</CardTitle>
-                <CardDescription>Configurez vos préférences de notifications.</CardDescription>
+                <CardTitle>Dossier médical</CardTitle>
+                <CardDescription>Vos informations médicales</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Méthode de notification</h4>
-                  <RadioGroup defaultValue="email">
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="email" id="notification-email" />
-                      <Label htmlFor="notification-email">Email</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="sms" id="notification-sms" />
-                      <Label htmlFor="notification-sms">SMS</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="both" id="notification-both" />
-                      <Label htmlFor="notification-both">Email et SMS</Label>
-                    </div>
-                  </RadioGroup>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">
+                      Allergies
+                    </h3>
+                    <p className="text-base font-medium">
+                      {userData.allergies || "Aucune allergie renseignée"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-gray-500">
+                      Médicaments
+                    </h3>
+                    <p className="text-base font-medium">
+                      {userData.medicaments || "Aucun médicament renseigné"}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h4 className="text-sm font-medium">Types de notifications</h4>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="new-message">Nouveaux messages</Label>
-                      <p className="text-sm text-gray-500">Recevez des notifications pour les nouveaux messages.</p>
-                    </div>
-                    <Switch id="new-message" defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="document-updates">Mises à jour de documents</Label>
-                      <p className="text-sm text-gray-500">
-                        Recevez des notifications lorsque vos documents sont mis à jour.
-                      </p>
-                    </div>
-                    <Switch id="document-updates" defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="reminders">Rappels</Label>
-                      <p className="text-sm text-gray-500">Recevez des rappels pour vos rendez-vous et tâches.</p>
-                    </div>
-                    <Switch id="reminders" defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="marketing">Communications marketing</Label>
-                      <p className="text-sm text-gray-500">
-                        Recevez des informations sur nos nouveaux services et offres.
-                      </p>
-                    </div>
-                    <Switch id="marketing" />
+                <div className="pt-2 border-t border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">
+                    Antécédents médicaux
+                  </h3>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="text-base font-medium">
+                      {userData.antecedents ||
+                        "Aucun antécédent médical renseigné"}
+                    </p>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button onClick={handleSave} className="ml-auto bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Enregistrer
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
             </Card>
           </motion.div>
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }
