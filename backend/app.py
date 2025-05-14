@@ -759,7 +759,6 @@ def me():
 
 
 @app.route("/upload", methods=["POST"])
-@jwt_required()
 def upload_file():
     """
     Télécharger un fichier vers Cloud Storage
@@ -826,7 +825,6 @@ def upload_file():
 
 
 @app.route("/fichiers/<filename>", methods=["GET"])
-@jwt_required()
 def telecharger_fichier(filename):
     """
     Télécharger un fichier depuis Cloud Storage
@@ -881,7 +879,6 @@ def telecharger_fichier(filename):
 
 
 @app.route("/fichiers/<int:id>", methods=["DELETE"])
-@jwt_required()
 def supprimer_fichier(id):
     """
     Supprimer un fichier
@@ -922,7 +919,6 @@ def supprimer_fichier(id):
 
 
 @app.route("/fichiers", methods=["GET"])
-@jwt_required()
 def lister_fichiers():
     """
     Lister les fichiers de l'utilisateur
