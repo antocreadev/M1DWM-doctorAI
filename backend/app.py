@@ -17,7 +17,7 @@ from flask_jwt_extended import (
 )
 import os
 from flasgger import Swagger
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import string
 import uuid
@@ -46,6 +46,8 @@ DB_PORT = "5432"
 app.config["JWT_SECRET_KEY"] = os.environ.get(
     "JWT_SECRET_KEY", "ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg="
 )
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] =timedelta(days=365 * 10) 
+
 app.config["UPLOAD_FOLDER"] = os.environ.get("UPLOAD_FOLDER", "uploads")
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 

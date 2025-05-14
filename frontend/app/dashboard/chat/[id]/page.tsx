@@ -183,7 +183,7 @@ export default function ChatPage({ params, searchParams }: ChatPageProps) {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-w-[80vw]">
       <div className="flex items-center mb-4">
         <Link href="/dashboard">
           <Button
