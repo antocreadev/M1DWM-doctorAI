@@ -50,135 +50,114 @@ export default function NewChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    if (!message.trim()) return;
+  if (!message.trim()) return;
 
-    // Ajouter le message de l'utilisateur localement pour affichage immédiat
-    const userMessage = { role: "user", contenu: message };
-    setMessages((prev) => [...prev, userMessage]);
+  // Ajouter le message de l'utilisateur localement pour affichage immédiat
+  const userMessage = { role: "user", contenu: message };
+  setMessages((prev) => [...prev, userMessage]);
 
-    // Réinitialiser le champ de saisie
-    setMessage("");
-    setIsLoading(true);
-    setError(null);
+  // Réinitialiser le champ de saisie
+  setMessage("");
+  setIsLoading(true);
+  setError(null);
 
-    try {
-      if (!conversationId) {
-        // Créer une nouvelle conversation
-        const convResponse = await fetch(
-          "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/conversations",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({
-              titre:
-                message.substring(0, 30) + (message.length > 30 ? "..." : ""),
-            }),
-          }
-        );
-
-        if (!convResponse.ok) {
-          throw new Error("Erreur lors de la création de la conversation");
+  try {
+    if (!conversationId) {
+      // Créer une nouvelle conversation
+      const convResponse = await fetch(
+        "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/conversations",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            titre:
+              message.substring(0, 30) + (message.length > 30 ? "..." : ""),
+          }),
         }
+      );
 
-        const convData = await convResponse.json();
-        setConversationId(convData.id);
-
-        console.log("le message est", message);
-
-        // Ajoute les informations utilisateur à la variable message
-        const userInfo = await fetch(
-          "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me",
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        const userInfoData = await userInfo.json();
-        console.log("userInfoData", userInfoData);
-        const userInfoMessage = `Here is the user information :  lastname : ${userInfoData.nom},  firstname : ${userInfoData.prenom}, email : ${userInfoData.email}, date of birth : ${userInfoData.date_naissance}, gender : ${userInfoData.genre}, profession : ${userInfoData.profession}, allergies : ${userInfoData.allergies}, medical history : ${userInfoData.antecedents}, medications : ${userInfoData.medicaments}`;
-        console.log("userInfoMessage", userInfoMessage);
-
-        const fullMessage = `${userInfoMessage} ${message}`;
-
-        setMessages((prev) => [
-          ...prev,
-          { role: "user", contenu: fullMessage },
-        ]);
-
-        const msgResponse = await fetch(
-          `https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/conversations/${convData.id}/messages`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({
-              contenu: message,
-              include_files: true, // Nouvelle option pour indiquer d'inclure les fichiers
-              file_ids: userFiles.map((file) => file.id), // Envoyer les IDs des fichiers
-            }),
-          }
-        );
-
-        if (!msgResponse.ok) {
-          throw new Error("Erreur lors de l'envoi du message");
-        }
-
-        const msgData = await msgResponse.json();
-
-        // Ajouter la réponse de l'IA aux messages
-        setMessages((prev) => [
-          ...prev,
-          { role: "ai", contenu: msgData.ai_response },
-        ]);
-
-        // Rediriger vers la page de conversation en gardant l'historique
-        router.replace(`/dashboard/chat/${convData.id}`);
-      } else {
-        // Ajouter un message à une conversation existante
-        const msgResponse = await fetch(
-          `/api/conversations/${conversationId}/messages`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({ contenu: message }),
-          }
-        );
-
-        if (!msgResponse.ok) {
-          throw new Error("Erreur lors de l'envoi du message");
-        }
-
-        const msgData = await msgResponse.json();
-
-        // Ajouter la réponse de l'IA aux messages
-        setMessages((prev) => [
-          ...prev,
-          { role: "ai", contenu: msgData.ai_response },
-        ]);
+      if (!convResponse.ok) {
+        throw new Error("Erreur lors de la création de la conversation");
       }
-    } catch (err: any) {
-      setError(err.message);
-      // Afficher le message d'erreur dans les messages
+
+      const convData = await convResponse.json();
+      setConversationId(convData.id);
+
+      // Envoyer le message au backend
+      // Le backend va récupérer les infos utilisateur directement
+      const msgResponse = await fetch(
+        `https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/conversations/${convData.id}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            contenu: message,
+            include_files: true,
+            file_ids: userFiles.map((file) => file.id),
+          }),
+        }
+      );
+
+      if (!msgResponse.ok) {
+        throw new Error("Erreur lors de l'envoi du message");
+      }
+
+      const msgData = await msgResponse.json();
+
+      // Ajouter la réponse de l'IA aux messages
       setMessages((prev) => [
         ...prev,
-        { role: "system", contenu: `Erreur: ${err.message}` },
+        { role: "ai", contenu: msgData.ai_response },
       ]);
-    } finally {
-      setIsLoading(false);
+
+      // Rediriger vers la page de conversation en gardant l'historique
+      router.replace(`/dashboard/chat/${convData.id}`);
+    } else {
+      // Ajouter un message à une conversation existante
+      const msgResponse = await fetch(
+        `/api/conversations/${conversationId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ contenu: message }),
+        }
+      );
+
+      if (!msgResponse.ok) {
+        throw new Error("Erreur lors de l'envoi du message");
+      }
+
+      const msgData = await msgResponse.json();
+
+      // Ajouter la réponse de l'IA aux messages
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", contenu: msgData.ai_response },
+      ]);
     }
-  };
+  } catch (err: any) {
+    setError(err.message);
+    // Afficher le message d'erreur dans les messages
+    setMessages((prev) => [
+      ...prev,
+      { role: "system", contenu: `Erreur: ${err.message}` },
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="flex flex-col h-full min-w-[80vw]">

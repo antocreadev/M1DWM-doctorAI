@@ -34,11 +34,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // URL de base de l'API
 const API_URL = "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/";
 
 export default function DocumentsPage() {
+  const router = useRouter();
   const [documents, setDocuments] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -51,6 +53,12 @@ export default function DocumentsPage() {
   const downloadLinkRef = useRef(null);
 
   const getAuthToken = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("Token non trouvé dans le localStorage");
+      router.push("/auth/login");
+      return null;
+    }
     return localStorage.getItem("token");
   };
 
@@ -151,9 +159,16 @@ export default function DocumentsPage() {
   };
 
   const handleDownload = async (filename) => {
+    const token = getAuthToken();
+    console.log("Token:", token); // Vérifiez que le token est bien récupéré
+    if (!token) {
+      toast.error("Token non trouvé");
+      return;
+    }
+
     try {
       toast.info("Préparation du téléchargement...");
-
+      console.log("telechargement du fichier ///// token", token);
       const response = await fetch(`${API_URL}fichiers/${filename}`, {
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,
@@ -197,6 +212,7 @@ export default function DocumentsPage() {
     }
 
     try {
+      console.log("voir du fichier ///// token", getAuthToken());
       const response = await fetch(`${API_URL}fichiers/${filename}`, {
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,

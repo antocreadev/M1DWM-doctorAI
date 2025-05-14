@@ -35,7 +35,7 @@ from google.cloud import storage
 # Configuration de base
 app = Flask(__name__)
 
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*", "headers": ["Authorization"]}})
 
 # Configuration de la base de données PostgreSQL avec Render.com
 DB_USER = "doctorai_a7k3_user"
@@ -144,8 +144,8 @@ import logging
 # Configuration du logging pour plus de détails
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 # Rendre l'hôte Ollama configurable via variable d'environnement
@@ -154,7 +154,7 @@ ollama_host = os.environ.get(
 )
 
 # Définition des URL correctes pour l'API
-# Si nous avons une réponse à la racine, mais 404 sur /api/status, 
+# Si nous avons une réponse à la racine, mais 404 sur /api/status,
 # c'est que l'API est probablement exposée directement
 OLLAMA_API_URL = ollama_host + "/api/chat"
 OLLAMA_STATUS_URL = ollama_host + "/api/status"
@@ -162,14 +162,14 @@ OLLAMA_PULL_URL = ollama_host + "/api/pull"
 
 # URL alternatives à essayer si les URL standards échouent
 OLLAMA_API_URLS_ALTERNATIVES = [
-    ollama_host + "/chat",             # Sans préfixe /api
-    ollama_host + "/v1/chat/completions"  # Format OpenAI compatible
+    ollama_host + "/chat",  # Sans préfixe /api
+    ollama_host + "/v1/chat/completions",  # Format OpenAI compatible
 ]
 
 OLLAMA_STATUS_URLS_ALTERNATIVES = [
     ollama_host + "/health",
     ollama_host + "/status",
-    ollama_host              # Simplement la racine, elle peut retourner un statut
+    ollama_host,  # Simplement la racine, elle peut retourner un statut
 ]
 
 
@@ -180,67 +180,86 @@ ollama_available = False
 MAX_RETRIES = 3
 RETRY_DELAY = 2  # secondes
 
+
 def find_working_api_endpoint():
     """Essaie de découvrir l'URL d'API qui fonctionne"""
     global OLLAMA_API_URL, OLLAMA_STATUS_URL
-    
+
     print(f"Test de l'URL de base: {ollama_host}")
     try:
         response = requests.get(ollama_host, timeout=5)
-        print(f"Réponse de l'URL de base: Code {response.status_code}, Contenu: '{response.text[:100]}'")
+        print(
+            f"Réponse de l'URL de base: Code {response.status_code}, Contenu: '{response.text[:100]}'"
+        )
     except Exception as e:
         print(f"Erreur lors du test de l'URL de base: {e}")
-    
+
     # Essai des URL de statut alternatives
     for url in [OLLAMA_STATUS_URL] + OLLAMA_STATUS_URLS_ALTERNATIVES:
         try:
             print(f"Test de l'URL de statut: {url}")
             response = requests.get(url, timeout=5)
-            print(f"Réponse de {url}: Code {response.status_code}, Contenu: '{response.text[:100]}'")
-            
+            print(
+                f"Réponse de {url}: Code {response.status_code}, Contenu: '{response.text[:100]}'"
+            )
+
             if response.status_code == 200:
                 OLLAMA_STATUS_URL = url
                 print(f"URL de statut trouvée: {OLLAMA_STATUS_URL}")
                 break
         except Exception as e:
             print(f"Erreur lors du test de {url}: {e}")
-    
+
     # Test simple d'une requête pour identifier une API fonctionnelle
     test_message = {"role": "user", "content": "Hello"}
-    
+
     for url in [OLLAMA_API_URL] + OLLAMA_API_URLS_ALTERNATIVES:
         try:
             print(f"Test de l'URL API: {url}")
-            
+
             # On essaie différentes structures de payload
             payloads = [
-                {"model": model_name, "messages": [test_message]},  # Format standard Ollama
-                {"model": model_name, "prompt": "Hello"},           # Format simplifié
-                {"model": model_name, "messages": [test_message], "stream": False},  # Avec stream=False
-                {"messages": [test_message]}                        # Sans spécifier le modèle
+                {
+                    "model": model_name,
+                    "messages": [test_message],
+                },  # Format standard Ollama
+                {"model": model_name, "prompt": "Hello"},  # Format simplifié
+                {
+                    "model": model_name,
+                    "messages": [test_message],
+                    "stream": False,
+                },  # Avec stream=False
+                {"messages": [test_message]},  # Sans spécifier le modèle
             ]
-            
+
             for payload in payloads:
                 try:
                     print(f"Test de l'URL {url} avec payload: {payload}")
                     response = requests.post(url, json=payload, timeout=10)
-                    print(f"Réponse de {url}: Code {response.status_code}, Début contenu: '{response.text[:100]}'")
-                    
+                    print(
+                        f"Réponse de {url}: Code {response.status_code}, Début contenu: '{response.text[:100]}'"
+                    )
+
                     if response.status_code == 200:
                         OLLAMA_API_URL = url
-                        print(f"✅ URL API fonctionnelle trouvée: {OLLAMA_API_URL} avec payload: {payload}")
+                        print(
+                            f"✅ URL API fonctionnelle trouvée: {OLLAMA_API_URL} avec payload: {payload}"
+                        )
                         return True
-                    
+
                     # Si 400 ou autre erreur similaire, l'endpoint existe mais le format est incorrect
                     elif 400 <= response.status_code < 500:
-                        print(f"⚠️ L'endpoint existe mais a retourné une erreur {response.status_code}")
+                        print(
+                            f"⚠️ L'endpoint existe mais a retourné une erreur {response.status_code}"
+                        )
                 except Exception as e:
                     print(f"Erreur spécifique au payload pour {url}: {e}")
-                    
+
         except Exception as e:
             print(f"Erreur lors du test de {url}: {e}")
-    
+
     return False
+
 
 def check_ollama_status():
     """Vérifier si le serveur Ollama est en ligne"""
@@ -251,8 +270,10 @@ def check_ollama_status():
             print(f"✅ Le serveur Ollama est en ligne: {response.text}")
             return True
         else:
-            print(f"❌ Le serveur Ollama a répondu avec le code {response.status_code}: {response.text}")
-            
+            print(
+                f"❌ Le serveur Ollama a répondu avec le code {response.status_code}: {response.text}"
+            )
+
             # Si on a un 404 sur l'URL de statut standard, essayons de trouver la bonne URL
             if response.status_code == 404:
                 print("Tentative de détection automatique des endpoints...")
@@ -260,7 +281,9 @@ def check_ollama_status():
                     return True
             return False
     except requests.exceptions.ConnectionError:
-        print(f"❌ Erreur de connexion: impossible de se connecter à {OLLAMA_STATUS_URL}")
+        print(
+            f"❌ Erreur de connexion: impossible de se connecter à {OLLAMA_STATUS_URL}"
+        )
         return False
     except requests.exceptions.Timeout:
         print(f"❌ Délai d'attente dépassé lors de la connexion à {OLLAMA_STATUS_URL}")
@@ -269,55 +292,66 @@ def check_ollama_status():
         print(f"❌ Erreur lors de la vérification du statut d'Ollama: {e}")
         return False
 
+
 def pull_model(model_name):
     """Télécharger le modèle depuis Ollama avec gestion des erreurs"""
     print(f"Téléchargement du modèle '{model_name}'...")
     pull_url = OLLAMA_PULL_URL
     pull_data = {"name": model_name}
-    
+
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             print(f"Tentative #{attempt} de téléchargement du modèle via {pull_url}...")
             response = requests.post(pull_url, json=pull_data, timeout=30)
-            
+
             print(f"Réponse brute: {response}")
             print(f"Contenu: {response.text[:200]}...")  # Afficher le début du contenu
-            
+
             if response.status_code == 200:
                 try:
                     result = response.json()
-                    print(f"✅ Modèle téléchargé avec succès: {json.dumps(result, indent=2)}")
+                    print(
+                        f"✅ Modèle téléchargé avec succès: {json.dumps(result, indent=2)}"
+                    )
                     return True
                 except json.JSONDecodeError as jde:
                     print(f"⚠️ Réponse reçue mais format JSON invalide: {jde}")
                     print(f"Contenu brut: {response.text[:500]}")
-                    
+
                     # Si la réponse est en streaming, elle peut contenir plusieurs lignes JSON
                     # Essayons de traiter chaque ligne séparément
                     success = False
                     try:
-                        for line in response.text.strip().split('\n'):
+                        for line in response.text.strip().split("\n"):
                             if line.strip():
                                 line_data = json.loads(line)
-                                print(f"Ligne traitée: {json.dumps(line_data, indent=2)}")
+                                print(
+                                    f"Ligne traitée: {json.dumps(line_data, indent=2)}"
+                                )
                                 success = True
                     except Exception as line_error:
-                        print(f"Erreur lors du traitement ligne par ligne: {line_error}")
-                    
+                        print(
+                            f"Erreur lors du traitement ligne par ligne: {line_error}"
+                        )
+
                     return success
             else:
-                print(f"⚠️ Échec du téléchargement (code {response.status_code}): {response.text}")
-                
-                # Si l'endpoint pull n'existe pas, on considère que le modèle est déjà disponible 
+                print(
+                    f"⚠️ Échec du téléchargement (code {response.status_code}): {response.text}"
+                )
+
+                # Si l'endpoint pull n'existe pas, on considère que le modèle est déjà disponible
                 # (certaines implémentations d'Ollama n'ont pas l'endpoint pull)
                 if response.status_code == 404:
-                    print("L'endpoint /api/pull n'existe pas. On suppose que le modèle est déjà disponible.")
+                    print(
+                        "L'endpoint /api/pull n'existe pas. On suppose que le modèle est déjà disponible."
+                    )
                     return True
-                
+
             if attempt < MAX_RETRIES:
                 print(f"Nouvelle tentative dans {RETRY_DELAY} secondes...")
                 time.sleep(RETRY_DELAY)
-                
+
         except requests.exceptions.ConnectionError:
             print(f"❌ Erreur de connexion lors de la tentative #{attempt}")
         except requests.exceptions.Timeout:
@@ -325,9 +359,10 @@ def pull_model(model_name):
         except Exception as e:
             print(f"❌ Erreur inattendue lors de la tentative #{attempt}: {str(e)}")
             print(f"Type d'erreur: {type(e).__name__}")
-            
+
     print("❌ Échec du téléchargement du modèle après plusieurs tentatives")
     return False
+
 
 # Programme principal - Initialisation d'Ollama
 try:
@@ -338,120 +373,136 @@ try:
     print(f"URL Statut (initiale): {OLLAMA_STATUS_URL}")
     print(f"Modèle: {model_name}")
     print("=" * 50)
-    
+
     # Vérifier si Ollama est accessible (cela peut aussi détecter les bonnes URL)
     if not check_ollama_status():
         # Si l'API n'est pas accessible via les URL standard, essayer la détection automatique
         print("Tentative de détection automatique des URL d'API...")
         if not find_working_api_endpoint():
-            print("⚠️ Le serveur Ollama n'est pas accessible, même après détection automatique")
+            print(
+                "⚠️ Le serveur Ollama n'est pas accessible, même après détection automatique"
+            )
             raise ConnectionError("Impossible de se connecter au serveur Ollama")
-    
+
     # Si on arrive ici, on a au moins établi une connexion
     print(f"URL API (finale): {OLLAMA_API_URL}")
     print(f"URL Statut (finale): {OLLAMA_STATUS_URL}")
-    
+
     # On peut considérer qu'Ollama est disponible même sans modèle téléchargé
     ollama_available = True
-    
+
     # Télécharger le modèle (optionnel selon l'implémentation)
     try:
         if pull_model(model_name):
             print(f"✅ Téléchargement du modèle '{model_name}' réussi")
         else:
-            print(f"⚠️ Échec du téléchargement du modèle '{model_name}', mais l'API est accessible")
+            print(
+                f"⚠️ Échec du téléchargement du modèle '{model_name}', mais l'API est accessible"
+            )
     except Exception as model_error:
         print(f"⚠️ Erreur lors du téléchargement du modèle: {model_error}")
         print("L'API reste accessible malgré l'échec du téléchargement")
-    
+
     print(f"✅ Initialisation d'Ollama réussie")
-        
+
 except Exception as e:
     print(f"⚠️ Erreur lors de l'initialisation d'Ollama: {e}")
     print(f"Détails de l'erreur: {type(e).__name__}")
     print(f"L'application continuera sans les fonctionnalités d'IA...")
-    
+
     # Afficher la trace complète pour le débogage
     import traceback
+
     print("Trace d'erreur complète:")
     traceback.print_exc()
-    
+
 finally:
-    print(f"État final d'Ollama: {'DISPONIBLE' if ollama_available else 'INDISPONIBLE'}")
+    print(
+        f"État final d'Ollama: {'DISPONIBLE' if ollama_available else 'INDISPONIBLE'}"
+    )
     print("=" * 50)
+
 
 # Fonction pour essayer une requête de chat
 def test_chat_query():
     if not ollama_available:
         print("❌ Ollama n'est pas disponible, impossible de tester le chat")
         return
-        
+
     try:
         print("\nTest d'une requête de chat simple...")
-        
+
         # Trois formats courants pour les requêtes chat
         formats = [
             # Format standard Ollama
             {
                 "model": model_name,
                 "messages": [{"role": "user", "content": "Bonjour, comment ça va?"}],
-                "stream": False
+                "stream": False,
             },
             # Format OpenAI compatible
             {
                 "model": model_name,
-                "messages": [{"role": "user", "content": "Bonjour, comment ça va?"}]
+                "messages": [{"role": "user", "content": "Bonjour, comment ça va?"}],
             },
             # Format simplifié
-            {
-                "model": model_name,
-                "prompt": "Bonjour, comment ça va?"
-            }
+            {"model": model_name, "prompt": "Bonjour, comment ça va?"},
         ]
-        
+
         success = False
         for idx, chat_data in enumerate(formats):
             try:
                 print(f"\nEssai du format #{idx+1}: {json.dumps(chat_data, indent=2)}")
                 response = requests.post(OLLAMA_API_URL, json=chat_data, timeout=30)
-                
+
                 print(f"Statut de réponse: {response.status_code}")
                 if response.status_code == 200:
                     try:
                         # Essayer de traiter comme un JSON unique
                         result = response.json()
-                        print(f"✅ Réponse du modèle reçue: {json.dumps(result, indent=2)[:500]}")
+                        print(
+                            f"✅ Réponse du modèle reçue: {json.dumps(result, indent=2)[:500]}"
+                        )
                         success = True
                         break
                     except json.JSONDecodeError:
                         # La réponse pourrait être un flux de JSONs ligne par ligne
                         print("Tentative de traitement ligne par ligne...")
-                        lines = response.text.strip().split('\n')
+                        lines = response.text.strip().split("\n")
                         if lines:
-                            for i, line in enumerate(lines[:5]):  # Afficher les 5 premières lignes
+                            for i, line in enumerate(
+                                lines[:5]
+                            ):  # Afficher les 5 premières lignes
                                 try:
                                     if line.strip():
                                         line_data = json.loads(line)
-                                        print(f"Ligne {i+1}: {json.dumps(line_data, indent=2)}")
+                                        print(
+                                            f"Ligne {i+1}: {json.dumps(line_data, indent=2)}"
+                                        )
                                         success = True
                                 except json.JSONDecodeError:
-                                    print(f"Ligne {i+1} n'est pas un JSON valide: {line[:100]}")
+                                    print(
+                                        f"Ligne {i+1} n'est pas un JSON valide: {line[:100]}"
+                                    )
                             if success:
                                 break
                         else:
                             print(f"Réponse brute: {response.text[:500]}")
                 else:
-                    print(f"❌ Erreur lors de la requête de chat (code {response.status_code}): {response.text[:500]}")
+                    print(
+                        f"❌ Erreur lors de la requête de chat (code {response.status_code}): {response.text[:500]}"
+                    )
             except Exception as format_error:
                 print(f"❌ Erreur avec le format #{idx+1}: {format_error}")
-        
+
         if success:
             print("\n✅ Test de chat réussi avec au moins un format!")
         else:
             print("\n❌ Tous les formats de requête ont échoué")
-            
+
     except Exception as e:
         print(f"❌ Erreur lors du test de chat: {e}")
+
 
 # Exécuter le test de chat si Ollama est disponible
 if ollama_available:
@@ -934,9 +985,7 @@ def creer_conversation():
     return jsonify(id=c.id, titre=c.titre)
 
 
-
-
-#-----
+# -----
 @app.route("/conversations/<int:id>/messages", methods=["POST"])
 @jwt_required()
 def ajouter_message(id):
@@ -971,27 +1020,32 @@ def ajouter_message(id):
     try:
         print("Ajouter un message à la conversation")
         print(request.json)
-        
+
         # Vérification que la requête contient des données JSON
         if not request.json:
             return jsonify(error="Requête JSON invalide"), 400
-            
+
         # Vérification que le contenu du message est présent
         if "contenu" not in request.json:
             return jsonify(error="Le contenu du message est requis"), 400
-            
+
         user_id = get_jwt_identity()
         data = request.json
-        
+
         # Vérifier si la conversation existe et appartient à l'utilisateur
         conversation = Conversation.query.filter_by(id=id, user_id=user_id).first()
         if not conversation:
             return jsonify(error="Conversation non trouvée ou accès non autorisé"), 404
-        
-        # Ajout du message utilisateur
+
+        # Récupérer les informations de l'utilisateur
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify(error="Utilisateur non trouvé"), 404
+
+        # Ajout du message utilisateur - uniquement le contenu original sans les infos user
         message_user = Message(contenu=data["contenu"], role="user", conversation_id=id)
         db.session.add(message_user)
-        
+
         try:
             db.session.commit()
             print(f"Message utilisateur ajouté avec ID: {message_user.id}")
@@ -1003,16 +1057,35 @@ def ajouter_message(id):
         # Initialisation de la réponse IA
         ai_response = ""
         error_details = None
-        
+
         # Vérifier si Ollama est disponible
         print(f"Ollama disponible: {ollama_available}")
         if not ollama_available:
-            ai_response = "Service IA temporairement indisponible. Veuillez réessayer plus tard."
+            ai_response = (
+                "Service IA temporairement indisponible. Veuillez réessayer plus tard."
+            )
             error_details = "Ollama n'est pas configuré ou disponible"
         else:
             try:
+                # Construction du prompt en commençant par les informations utilisateur
+                # Préparation des informations utilisateur pour le contexte
+                user_info = f"""
+                User Information:
+                - Last Name: {user.nom}
+                - First Name: {user.prenom}
+                - Email: {user.email}
+                - Date of Birth: {user.date_naissance.isoformat() if user.date_naissance else "Not specified"}
+                - Gender: {user.genre if user.genre else "Not specified"}
+                - Profession: {user.profession if user.profession else "Not specified"}
+                - Medical History: {user.antecedents if user.antecedents else "None"}
+                - Medications: {user.medicaments if user.medicaments else "None"}
+                - Allergies: {user.allergies if user.allergies else "None"}
+                """
+
+                # Message original de l'utilisateur
+                user_message = data["contenu"]
+
                 # Construction du prompt avec les fichiers si demandé
-                prompt = data["contenu"]
                 fichiers_inclus = []
 
                 # Vérifier si nous devons inclure les fichiers
@@ -1023,12 +1096,16 @@ def ajouter_message(id):
                     # Récupérer les fichiers
                     if not file_ids:
                         fichiers = File.query.filter_by(user_id=user_id).all()
-                        print(f"Récupération de tous les fichiers de l'utilisateur: {len(fichiers)} fichiers trouvés")
+                        print(
+                            f"Récupération de tous les fichiers de l'utilisateur: {len(fichiers)} fichiers trouvés"
+                        )
                     else:
                         fichiers = File.query.filter(
                             File.id.in_(file_ids), File.user_id == user_id
                         ).all()
-                        print(f"Récupération des fichiers spécifiés: {len(fichiers)}/{len(file_ids)} fichiers trouvés")
+                        print(
+                            f"Récupération des fichiers spécifiés: {len(fichiers)}/{len(file_ids)} fichiers trouvés"
+                        )
 
                     # Traitement des fichiers
                     if fichiers:
@@ -1045,7 +1122,9 @@ def ajouter_message(id):
 
                                 # Vérifier si le blob existe
                                 if not blob.exists():
-                                    print(f"Le fichier n'existe pas dans le bucket: {gcs_path}")
+                                    print(
+                                        f"Le fichier n'existe pas dans le bucket: {gcs_path}"
+                                    )
                                     continue
 
                                 # Créer un fichier temporaire pour stocker le contenu
@@ -1065,9 +1144,13 @@ def ajouter_message(id):
                                                     page_text = page.extract_text()
                                                     if page_text:
                                                         file_content += page_text + "\n"
-                                            print(f"Texte extrait du PDF: {len(file_content)} caractères")
+                                            print(
+                                                f"Texte extrait du PDF: {len(file_content)} caractères"
+                                            )
                                         except Exception as pdf_err:
-                                            print(f"Erreur lors de l'extraction du texte du PDF: {str(pdf_err)}")
+                                            print(
+                                                f"Erreur lors de l'extraction du texte du PDF: {str(pdf_err)}"
+                                            )
                                             file_content = f"[Erreur lors de l'extraction du texte du PDF: {str(pdf_err)}]"
                                     else:
                                         # Pour les autres types de fichiers, essayer de lire comme texte
@@ -1076,12 +1159,18 @@ def ajouter_message(id):
                                                 temp.name, "r", encoding="utf-8"
                                             ) as text_file:
                                                 file_content = text_file.read()
-                                            print(f"Texte lu: {len(file_content)} caractères")
+                                            print(
+                                                f"Texte lu: {len(file_content)} caractères"
+                                            )
                                         except UnicodeDecodeError:
-                                            print(f"Contenu binaire non lisible pour {fichier.nom}")
+                                            print(
+                                                f"Contenu binaire non lisible pour {fichier.nom}"
+                                            )
                                             file_content = f"[Contenu binaire non lisible pour {fichier.nom}]"
                                         except Exception as file_err:
-                                            print(f"Erreur lors de la lecture du fichier: {str(file_err)}")
+                                            print(
+                                                f"Erreur lors de la lecture du fichier: {str(file_err)}"
+                                            )
                                             file_content = f"[Erreur lors de la lecture du fichier: {str(file_err)}]"
 
                                     # Ajouter au contenu des fichiers
@@ -1098,32 +1187,65 @@ def ajouter_message(id):
                         # Si des contenus de fichiers ont été extraits, les ajouter au prompt
                         if fichiers_content:
                             file_context = "\n\n".join(fichiers_content)
-                            print(f"Contenu des fichiers extrait: {len(file_context)} caractères")
+                            print(
+                                f"Contenu des fichiers extrait: {len(file_context)} caractères"
+                            )
 
                             # Construire le prompt complet avec les informations contextuelles
                             prompt = f"""
                             You are a medical assistant.
+                            
+                            {user_info}
 
                             The user has sent you several files that you need to analyze:
 
                             {file_context}
 
                             Here is the user's question:
-                            {data["contenu"]}
+                            {user_message}
                             """
-                            print("Prompt contextualisé avec fichiers créé")
+                            print(
+                                "Prompt contextualisé avec fichiers et informations utilisateur créé"
+                            )
                         else:
-                            print("Aucun contenu de fichier extrait. Utilisation du prompt simple.")
+                            print(
+                                "Aucun contenu de fichier extrait. Utilisation du prompt avec informations utilisateur."
+                            )
                             # Si aucun contenu de fichier n'a pu être extrait
-                            prompt = data["contenu"]
+                            prompt = f"""
+                            You are a medical assistant.
+                            
+                            {user_info}
+                            
+                            Here is the user's question:
+                            {user_message}
+                            """
                     else:
-                        print("Aucun fichier trouvé. Utilisation du prompt simple.")
+                        print(
+                            "Aucun fichier trouvé. Utilisation du prompt avec informations utilisateur."
+                        )
                         # Si aucun fichier n'est trouvé
-                        prompt = data["contenu"]
+                        prompt = f"""
+                        You are a medical assistant.
+                        
+                        {user_info}
+                        
+                        Here is the user's question:
+                        {user_message}
+                        """
                 else:
-                    # Utiliser simplement le message de l'utilisateur comme prompt
-                    print("Pas d'inclusion de fichiers demandée. Utilisation du prompt simple.")
-                    prompt = data["contenu"]
+                    # Utiliser simplement le message de l'utilisateur comme prompt avec les infos utilisateur
+                    print(
+                        "Pas d'inclusion de fichiers demandée. Utilisation du prompt avec informations utilisateur."
+                    )
+                    prompt = f"""
+                    You are a medical assistant.
+                    
+                    {user_info}
+                    
+                    Here is the user's question:
+                    {user_message}
+                    """
 
                 # Préparation de la requête à Ollama
                 print(f"API Ollama URL: {OLLAMA_API_URL}")
@@ -1137,46 +1259,55 @@ def ajouter_message(id):
                 print("Envoi de la requête à Ollama...")
                 try:
                     response = requests.post(
-                        OLLAMA_API_URL, 
-                        json=payload, 
+                        OLLAMA_API_URL,
+                        json=payload,
                         stream=True,
-                        timeout=60  # Timeout de 60 secondes
+                        timeout=60,  # Timeout de 60 secondes
                     )
-                    
+
                     print(f"Statut de la réponse: {response.status_code}")
-                    
+
                     if response.status_code != 200:
                         error_content = response.text
                         error_msg = f"Erreur API Ollama (HTTP {response.status_code}): {error_content}"
                         print(error_msg)
                         raise Exception(error_msg)
-                    
+
                     full_reply = []
-                    
+
                     # Compteur pour le débogage
                     line_count = 0
-                    
+
                     for line in response.iter_lines():
                         line_count += 1
                         if line:
                             try:
                                 line_str = line.decode("utf-8")
-                                print(f"Ligne {line_count} reçue: {line_str[:100]}...")  # Afficher le début de la ligne
-                                
+                                print(
+                                    f"Ligne {line_count} reçue: {line_str[:100]}..."
+                                )  # Afficher le début de la ligne
+
                                 data_json = json.loads(line_str)
-                                
+
                                 # Vérifier le format de la réponse selon la documentation Ollama
-                                if "message" in data_json and "content" in data_json["message"]:
+                                if (
+                                    "message" in data_json
+                                    and "content" in data_json["message"]
+                                ):
                                     bot_reply = data_json["message"]["content"]
                                     if bot_reply:
                                         full_reply.append(bot_reply)
-                                        print(f"Fragment de réponse ajouté: {bot_reply[:50]}...")  # Afficher le début
+                                        print(
+                                            f"Fragment de réponse ajouté: {bot_reply[:50]}..."
+                                        )  # Afficher le début
                                 else:
                                     # Format alternatif possible selon la version d'Ollama
                                     bot_reply = data_json.get("response", "")
                                     if bot_reply:
                                         full_reply.append(bot_reply)
-                                        print(f"Fragment de réponse (format alt) ajouté: {bot_reply[:50]}...")
+                                        print(
+                                            f"Fragment de réponse (format alt) ajouté: {bot_reply[:50]}..."
+                                        )
                             except json.JSONDecodeError as jde:
                                 error_msg = f"Erreur lors du décodage du JSON ligne {line_count}: {str(jde)}"
                                 print(error_msg)
@@ -1184,12 +1315,14 @@ def ajouter_message(id):
                             except Exception as e:
                                 error_msg = f"Erreur lors du traitement de la ligne {line_count}: {str(e)}"
                                 print(error_msg)
-                    
+
                     print(f"Nombre total de lignes traitées: {line_count}")
-                    
+
                     # Fusion des fragments de réponse
-                    ai_response = "".join(full_reply)  # Pas d'espace entre les fragments
-                    
+                    ai_response = "".join(
+                        full_reply
+                    )  # Pas d'espace entre les fragments
+
                     # Vérifier si la réponse est vide
                     if not ai_response:
                         print("Réponse vide reçue d'Ollama")
@@ -1200,25 +1333,27 @@ def ajouter_message(id):
                     else:
                         print(f"Réponse complète: {len(ai_response)} caractères")
                         print(f"Début de la réponse: {ai_response[:100]}...")
-                
+
                 except requests.exceptions.Timeout:
                     error_msg = "Timeout lors de la communication avec Ollama (60s)"
                     print(error_msg)
                     error_details = error_msg
                     ai_response = "Je suis désolé, le service IA met trop de temps à répondre. Veuillez réessayer plus tard."
-                
+
                 except requests.exceptions.ConnectionError:
-                    error_msg = f"Impossible de se connecter à Ollama à l'URL: {OLLAMA_API_URL}"
+                    error_msg = (
+                        f"Impossible de se connecter à Ollama à l'URL: {OLLAMA_API_URL}"
+                    )
                     print(error_msg)
                     error_details = error_msg
                     ai_response = "Je suis désolé, le service IA est actuellement inaccessible. Veuillez réessayer plus tard."
-                
+
                 except requests.exceptions.RequestException as e:
                     error_msg = f"Erreur lors de la communication avec Ollama: {str(e)}"
                     print(error_msg)
                     error_details = error_msg
                     ai_response = "Je suis désolé, je ne peux pas répondre pour le moment en raison d'une erreur de communication avec le service IA."
-            
+
             except Exception as e:
                 error_msg = f"Erreur inattendue: {str(e)}"
                 print(error_msg)
@@ -1235,7 +1370,7 @@ def ajouter_message(id):
 
         # Ajout de la réponse IA à la base de données
         message_ai = Message(contenu=ai_response, role="ai", conversation_id=id)
-        
+
         # Essayer d'ajouter et persister la réponse AI
         try:
             db.session.add(message_ai)
@@ -1250,19 +1385,19 @@ def ajouter_message(id):
         # Préparer la réponse
         response_data = {
             "message": "Message ajouté avec réponse IA",
-            "ai_response": ai_response
+            "ai_response": ai_response,
         }
-        
+
         # Ajouter les détails de l'erreur en mode debug
         if error_details and app.debug:
             response_data["debug_error"] = error_details
-            
+
         # Ajouter les informations sur les fichiers traités en mode debug
         if app.debug and data.get("include_files", False):
             response_data["processed_files"] = fichiers_inclus
-            
+
         return jsonify(response_data)
-        
+
     except Exception as e:
         # Gestion des erreurs globales
         error_msg = f"Erreur globale dans ajouter_message: {str(e)}"
@@ -1270,7 +1405,7 @@ def ajouter_message(id):
         logger.error(error_msg)
         traceback.print_exc()  # Afficher la pile d'appel pour le débogage
         return jsonify(error=error_msg), 500
-#----
+
 
 @app.route("/conversations/<int:id>", methods=["DELETE"])
 @jwt_required()
