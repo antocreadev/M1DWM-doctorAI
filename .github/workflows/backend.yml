@@ -70,3 +70,4 @@ jobs:
           DB_PASS=mediassist123
           DB_NAME=mediassist
           JWT_SECRET_KEY=ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg=
+          STORAGE_BUCKET=mediassist-prod-files

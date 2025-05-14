@@ -14,3 +14,4 @@ requests
 PyPDF2
 pg8000
 requests
+google-cloud-storage
