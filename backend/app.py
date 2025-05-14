@@ -659,7 +659,7 @@ def register():
             response_data={"message": "Utilisateur enregistré"},
         )
         return jsonify(message="Utilisateur enregistré"), 201
-
+ 
     except Exception as e:
         db.session.rollback()
         logger.exception("Erreur serveur pendant l'inscription")
