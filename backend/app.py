@@ -667,7 +667,8 @@ def register():
             "/register", "POST", 500, request_data=data, response_data={"error": str(e)}
         )
         return jsonify(error=f"Erreur interne : {str(e)}"), 500
-
+ 
+ 
 
 @app.route("/login", methods=["POST"])
 def login():
