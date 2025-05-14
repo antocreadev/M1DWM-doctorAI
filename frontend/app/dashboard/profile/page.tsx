@@ -12,7 +12,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LucideUser, FileText, MessageSquare, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { User } from "@/stores/data-users";
+import { User as BaseUser } from "@/stores/data-users";
+
+interface Conversation {
+  id: number;
+  titre: string;
+}
+
+interface User extends BaseUser {
+  conversations?: Conversation[];
+}
 
 export default function ProfilePage() {
   const [userData, setUserData] = useState<User | null>(null);
