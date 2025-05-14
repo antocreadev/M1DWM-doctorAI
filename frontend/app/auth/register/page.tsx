@@ -68,7 +68,6 @@ export default function RegisterPage() {
     // const user = useStore.getState().user;
     // console.log(user);
 
-
     setTimeout(() => {
       setIsLoading(false);
       router.push("/onboarding/step-1");
@@ -108,7 +107,12 @@ export default function RegisterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4" ref={formRef} data-cy="register-form">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4"
+              ref={formRef}
+              data-cy="register-form"
+            >
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName" className="text-teal-700">

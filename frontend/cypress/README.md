@@ -53,12 +53,12 @@ bun test:dev
 3. Utilisez la structure de base:
 
 ```typescript
-describe('Nom du test', () => {
+describe("Nom du test", () => {
   beforeEach(() => {
     // Code d'initialisation
   });
 
-  it('devrait faire quelque chose', () => {
+  it("devrait faire quelque chose", () => {
     // Votre test
   });
 });

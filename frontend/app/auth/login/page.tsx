@@ -101,7 +101,12 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4" ref={formRef} data-cy="login-form">
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-4"
+              ref={formRef}
+              data-cy="login-form"
+            >
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-teal-700">
                   Email
