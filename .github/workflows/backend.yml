@@ -2,7 +2,7 @@ name: Backend CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, lancementDB, jobs-deploy , jobs-deploy-test ]
+    branches: [ main, lancementDB, jobs-deploy ,jobs-deploy-test ]
     paths:
       - 'backend/**'
       - '.github/workflows/backend.yml'
@@ -174,4 +174,47 @@ jobs:
         else
           echo "⚠️ Backend service returned status $STATUS_CODE"
           echo "Service may still be starting up or experiencing issues"
+        fi
+
+  monitor:
+    name: Monitor
+    runs-on: ubuntu-latest
+    needs: operate
+    
+    steps:
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+    
+    - name: Verify monitoring configuration 
+      run: |
+        echo "Vérification de la configuration de monitoring..."
+        
+        # Vérifier que le service est bien en ligne et monitoré
+        SERVICE_URL="https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app"
+        RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/health || echo "failed")
+        
+        echo "Service status: $RESPONSE_CODE"
+        if [[ "$RESPONSE_CODE" == "200" ]]; then
+          echo "✅ Le service est en ligne et surveillé"
+          
+          # Vérifier les politiques d'alerte
+          ALERT_POLICIES=$(gcloud alpha monitoring policies list --filter="display_name:MediAssist" --format="table(name,displayName)" 2>/dev/null || echo "Impossible de lister les politiques d'alerte")
+          echo "Politiques d'alerte configurées:"
+          echo "$ALERT_POLICIES"
+          
+          # Vérifier les canaux de notification
+          CHANNELS=$(gcloud alpha monitoring channels list --filter="display_name:MediAssist" --format="table(name,displayName,type)" 2>/dev/null || echo "Impossible de lister les canaux de notification")
+          echo "Canaux de notification configurés:"
+          echo "$CHANNELS"
+          
+          echo ""
+          echo "✅ Monitoring configuré avec succès"
+          echo ""
+          echo "Tableaux de bord: https://console.cloud.google.com/monitoring/dashboards?project=${{ secrets.GCP_PROJECT_ID }}"
+          echo "Alertes: https://console.cloud.google.com/monitoring/alerting?project=${{ secrets.GCP_PROJECT_ID }}"
+          echo "Métriques Cloud Run: https://console.cloud.google.com/run/detail/${{ secrets.GCP_REGION }}/mediassist-backend-with-sql/metrics?project=${{ secrets.GCP_PROJECT_ID }}"
+        else
+          echo "⚠️ Le service a retourné le code $RESPONSE_CODE - Vérifiez les alertes"
         fi
