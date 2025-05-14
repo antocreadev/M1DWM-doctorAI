@@ -98,10 +98,10 @@ export default function NewChatPage() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
               contenu: message,
               include_files: true, // Nouvelle option pour indiquer d'inclure les fichiers
-              file_ids: userFiles.map(file => file.id) // Envoyer les IDs des fichiers
+              file_ids: userFiles.map((file) => file.id), // Envoyer les IDs des fichiers
             }),
           }
         );
