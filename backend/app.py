@@ -19,25 +19,36 @@ from PyPDF2 import PdfReader
 import requests
 import logging
 
+
+import chromadb
+
+chroma_client = chromadb.Client()
+collection = chroma_client.create_collection(name="my_collection")
+
+
 # Configuration de base
 app = Flask(__name__)
 
 CORS(app)
 
 # Configuration de la base de données PostgreSQL avec Render.com
-DB_USER = 'doctorai_a7k3_user'
-DB_PASS = '1aMtKSIUISaEIhutbx41MXohsXglXXyF'
-DB_NAME = 'doctorai_a7k3'
-DB_HOST = 'dpg-d0hpkk15pdvs739c3640-a.oregon-postgres.render.com'
-DB_PORT = '5432' 
+DB_USER = "doctorai_a7k3_user"
+DB_PASS = "1aMtKSIUISaEIhutbx41MXohsXglXXyF"
+DB_NAME = "doctorai_a7k3"
+DB_HOST = "dpg-d0hpkk15pdvs739c3640-a.oregon-postgres.render.com"
+DB_PORT = "5432"
 
 # Configuration JWT et dossier d'upload
-app.config["JWT_SECRET_KEY"] = os.environ.get('JWT_SECRET_KEY', 'ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg=')
-app.config["UPLOAD_FOLDER"] = os.environ.get('UPLOAD_FOLDER', 'uploads')
+app.config["JWT_SECRET_KEY"] = os.environ.get(
+    "JWT_SECRET_KEY", "ydEyUGomyWUgtelwRYPFOxQfLCN4EBgQGAepKMzRBXg="
+)
+app.config["UPLOAD_FOLDER"] = os.environ.get("UPLOAD_FOLDER", "uploads")
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 # Configuration de la connexion à la base de données
-app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+app.config["SQLALCHEMY_DATABASE_URI"] = (
+    f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Configuration du logger
@@ -46,7 +57,16 @@ logger = logging.getLogger(__name__)
 
 LOGGING_URL = "https://script.google.com/macros/s/AKfycbwWRptq7mZQ2yXqg0PBr-FNpCdVCU8NYIQZhzCtc92VDM4xzjI7vLtpquIkF8cmK1zP/exec"
 
-def log_to_google_sheets(endpoint, method, status_code, user_id=None, request_data=None, response_data=None, ip_address=None):
+
+def log_to_google_sheets(
+    endpoint,
+    method,
+    status_code,
+    user_id=None,
+    request_data=None,
+    response_data=None,
+    ip_address=None,
+):
     log_data = {
         "endpoint": endpoint,
         "method": method,
@@ -67,8 +87,11 @@ def log_to_google_sheets(endpoint, method, status_code, user_id=None, request_da
         logger.error(f"Erreur lors de l'envoi du log à Google Sheets: {e}")
         return False
 
+
 # Rendre l'hôte Ollama configurable via variable d'environnement
-ollama_host = os.environ.get("OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app")
+ollama_host = os.environ.get(
+    "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app"
+)
 OLLAMA_API_URL = ollama_host + "/api/chat"
 model_name = os.environ.get("MODEL_NAME", "tinyllama")
 
@@ -125,6 +148,7 @@ jwt = JWTManager(app)
 
 ### MODELES ###
 
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     prenom = db.Column(db.String(50))
@@ -143,22 +167,32 @@ class User(db.Model):
     antecedents = db.Column(db.String(500), nullable=True)
     medicaments = db.Column(db.String(500), nullable=True)
     allergies = db.Column(db.String(500), nullable=True)
-    fichiers = db.relationship("File", backref="user", lazy=True, cascade="all, delete-orphan")
-    conversations = db.relationship("Conversation", backref="user", lazy=True, cascade="all, delete-orphan")
+    fichiers = db.relationship(
+        "File", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    conversations = db.relationship(
+        "Conversation", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
 
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nom = db.Column(db.String(100))
     chemin = db.Column(db.String(200))
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False
+    )
 
 
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     titre = db.Column(db.String(100))
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
-    messages = db.relationship("Message", backref="conversation", lazy=True, cascade="all, delete-orphan")
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False
+    )
+    messages = db.relationship(
+        "Message", backref="conversation", lazy=True, cascade="all, delete-orphan"
+    )
 
 
 class Message(db.Model):
@@ -172,6 +206,7 @@ class Message(db.Model):
 
 ### ROUTES AUTH ###
 
+
 @app.route("/register", methods=["POST"])
 def register():
     data = request.json
@@ -181,7 +216,13 @@ def register():
     existing_user = User.query.filter_by(email=data["email"]).first()
     if existing_user:
         logger.warning(f"Échec inscription: Email {data['email']} déjà utilisé.")
-        log_to_google_sheets("/register", "POST", 400, request_data=data, response_data={"error": "Email déjà utilisé"})
+        log_to_google_sheets(
+            "/register",
+            "POST",
+            400,
+            request_data=data,
+            response_data={"error": "Email déjà utilisé"},
+        )
         return jsonify(error="Cet email est déjà utilisé."), 400
 
     try:
@@ -194,7 +235,9 @@ def register():
             nom=data["nom"],
             email=data["email"],
             password=hashed_pw,
-            date_naissance=datetime.fromisoformat(data["date_naissance"].replace("Z", "+00:00")),
+            date_naissance=datetime.fromisoformat(
+                data["date_naissance"].replace("Z", "+00:00")
+            ),
             genre=data["genre"],
             adresse=data["adresse"],
             ville=data["ville"],
@@ -212,14 +255,24 @@ def register():
         db.session.commit()
 
         logger.info(f"Utilisateur {user.email} enregistré avec succès")
-        log_to_google_sheets("/register", "POST", 201, user_id=user.id, request_data=data, response_data={"message": "Utilisateur enregistré"})
+        log_to_google_sheets(
+            "/register",
+            "POST",
+            201,
+            user_id=user.id,
+            request_data=data,
+            response_data={"message": "Utilisateur enregistré"},
+        )
         return jsonify(message="Utilisateur enregistré"), 201
 
     except Exception as e:
         db.session.rollback()
         logger.exception("Erreur serveur pendant l'inscription")
-        log_to_google_sheets("/register", "POST", 500, request_data=data, response_data={"error": str(e)})
+        log_to_google_sheets(
+            "/register", "POST", 500, request_data=data, response_data={"error": str(e)}
+        )
         return jsonify(error=f"Erreur interne : {str(e)}"), 500
+
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -256,6 +309,7 @@ def login():
 
 
 ### ROUTES UTILISATEUR ###
+
 
 @app.route("/me", methods=["GET"])
 @jwt_required()
@@ -304,6 +358,7 @@ def me():
 
 
 ### UPLOAD FICHIERS ###
+
 
 @app.route("/upload", methods=["POST"])
 @jwt_required()
@@ -435,6 +490,7 @@ def lister_fichiers():
 
 ### CONVERSATIONS ###
 
+
 @app.route("/conversations", methods=["POST"])
 @jwt_required()
 def creer_conversation():
@@ -498,11 +554,11 @@ def ajouter_message(id):
     """
     data = request.json
     message_user = Message(contenu=data["contenu"], role="user", conversation_id=id)
-    
+
     # Ajout du message utilisateur
     db.session.add(message_user)
     db.session.commit()
-    
+
     # Si Ollama est disponible, utiliser l'IA pour la réponse
     ai_response = ""
     if ollama_available:
@@ -511,10 +567,10 @@ def ajouter_message(id):
                 "model": model_name,
                 "messages": [{"role": "user", "content": data["contenu"]}],
             }
-            
+
             response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
             full_reply = []
-            
+
             for line in response.iter_lines():
                 if line:
                     try:
@@ -524,24 +580,26 @@ def ajouter_message(id):
                             full_reply.append(bot_reply)
                     except json.JSONDecodeError:
                         print("Erreur lors du décodage du JSON:", line)
-                        
+
             ai_response = " ".join(full_reply)
         except Exception as e:
             print(f"Erreur lors de la communication avec Ollama: {e}")
             ai_response = "Je suis désolé, je ne peux pas répondre pour le moment."
     else:
         # Réponse de repli si Ollama n'est pas disponible
-        ai_response = "Service IA temporairement indisponible. Veuillez réessayer plus tard."
-    
+        ai_response = (
+            "Service IA temporairement indisponible. Veuillez réessayer plus tard."
+        )
+
     # Si la réponse est vide, utiliser un message par défaut
     if not ai_response:
         ai_response = "Je suis désolé, je n'ai pas pu générer une réponse valide."
-    
+
     # Ajout de la réponse IA
     message_ai = Message(contenu=ai_response, role="ai", conversation_id=id)
     db.session.add(message_ai)
     db.session.commit()
-    
+
     return jsonify(message="Message ajouté avec réponse IA", ai_response=ai_response)
 
 
@@ -691,9 +749,12 @@ def chat():
             return jsonify({"error": "No valid reply from the model"}), 500
 
         return jsonify({"summary": final_reply})
-    
+
     except Exception as e:
-        return jsonify({"error": f"Erreur lors de la communication avec l'IA: {str(e)}"}), 500
+        return (
+            jsonify({"error": f"Erreur lors de la communication avec l'IA: {str(e)}"}),
+            500,
+        )
 
 
 # Route pour la santé de l'API
@@ -721,12 +782,14 @@ def health_check():
         db.session.execute("SELECT 1")
     except Exception as e:
         db_status = f"error: {str(e)}"
-    
-    return jsonify({
-        "status": "running",
-        "database": db_status,
-        "ollama": "available" if ollama_available else "unavailable"
-    })
+
+    return jsonify(
+        {
+            "status": "running",
+            "database": db_status,
+            "ollama": "available" if ollama_available else "unavailable",
+        }
+    )
 
 
 # à l'intérieur d'un contexte d'application
@@ -735,10 +798,13 @@ with app.app_context():
         db.create_all()
         app.logger.info("Base de données initialisée avec succès.")
     except Exception as e:
-        app.logger.error(f"Erreur lors de l'initialisation de la base de données: {str(e)}")
+        app.logger.error(
+            f"Erreur lors de l'initialisation de la base de données: {str(e)}"
+        )
+
 
 # Alternativement, créez une route dédiée pour initialiser la base de données
-@app.route('/init-db', methods=['GET'])
+@app.route("/init-db", methods=["GET"])
 def init_db():
     try:
         db.create_all()
@@ -750,12 +816,12 @@ def init_db():
 if __name__ == "__main__":
     # Configuration du logging
     logging.basicConfig(level=logging.INFO)
-    
+
     # Création des tables avant le démarrage
     with app.app_context():
         db.create_all()
         print("Base de données initialisée.")
-    
+
     # Démarrage du serveur
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=False)
