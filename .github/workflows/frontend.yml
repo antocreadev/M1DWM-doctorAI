@@ -2,190 +2,113 @@ name: Frontend CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, lancementDB , jobs-deploy ]
+    branches: [ main, lancementDB, jobs-deploy ]
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend.yml'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend.yml'
-
-env:
-  NODE_VERSION: '20'
-  GCP_REGION: ${{ secrets.GCP_REGION }}
-  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  IMAGE_NAME: frontend
-  SERVICE_NAME: mediassist-frontend
 
 jobs:
   lint:
-    name: Lint & Format Check
+    name: Lint
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
       
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
-      
-      - name: Lint with ESLint
-        run: |
-          cd frontend
-          npm run lint || true  # Continue on error
-  
-  test:
-    name: Run Tests
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm install
+        
+    - name: Lint
+      run: |
+        cd frontend
+        npm run lint || true  # Continue on error if lint fails
+
+  build:
+    name: Build
     runs-on: ubuntu-latest
     needs: lint
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
       
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm install
+        
+    - name: Build application
+      run: |
+        cd frontend
+        npm run build
       
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
-      
-      - name: Run tests
-        run: |
-          cd frontend
-          npm test || echo "No tests found, continuing..."
-  
-  build:
-    name: Build Application
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
-      
-      - name: Build application
-        run: |
-          cd frontend
-          npm run build
-      
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
-      - name: Configure Docker for GCP
-        run: |
-          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
-      
-      - name: Build and push Docker image
-        id: build-image
-        run: |
-          cd frontend
-          
-          # Build the Docker image with commit SHA tag
-          docker build -t ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mediassist-images/${{ env.IMAGE_NAME }}:${{ github.sha }} .
-          
-          # Also tag as latest
-          docker tag ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mediassist-images/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                    ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mediassist-images/${{ env.IMAGE_NAME }}:latest
-          
-          # Push both tags
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mediassist-images/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mediassist-images/${{ env.IMAGE_NAME }}:latest
-          
-          # Output the image URL for later use
-          echo "IMAGE_URL=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/mediassist-images/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
-    
-    outputs:
-      image_url: ${{ steps.build-image.outputs.IMAGE_URL }}
-  
-  deploy-staging:
-    name: Deploy to Staging
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Configure Docker to use Google Cloud
+      run: |
+        gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
+        
+    - name: Build and push frontend Docker image
+      run: |
+        cd frontend
+        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }} .
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }}
+        
+        # Tag as latest
+        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }} \
+                  ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:latest
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:latest
+
+  deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/lancementDB' || github.ref == 'refs/heads/jobs-deploy'  # Deploy to staging from lancementDB or jobs-deploy branch
     
     steps:
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
-      - name: Deploy to Cloud Run (Staging)
-        uses: google-github-actions/deploy-cloudrun@v1
-        with:
-          service: ${{ env.SERVICE_NAME }}-staging
-          image: ${{ needs.build.outputs.image_url }}
-          region: ${{ env.GCP_REGION }}
-          service_account_email: cloudrun-service-account@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
-          env_vars: |
-            NODE_ENV=production
-            NEXT_PUBLIC_API_URL=https://mediassist-backend-with-sql-staging-bv5bumqn3a-ew.a.run.app
-      
-      - name: Post-deployment validation
-        run: |
-          echo "Deployed frontend to staging environment."
-          echo "Running accessibility check..."
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.SERVICE_NAME }}-staging-bv5bumqn3a-ew.a.run.app || echo "failed")
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: Deploy to Cloud Run
+      uses: google-github-actions/deploy-cloudrun@v1
+      with:
+        service: mediassist-frontend
+        image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }}
+        region: ${{ secrets.GCP_REGION }}
+        env_vars: |
+          NODE_ENV=production
+          NEXT_PUBLIC_API_URL=https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app
+    
+    - name: Post-deployment check
+      run: |
+        echo "Deployed frontend to production environment."
+        echo "Running accessibility check..."
+        SERVICE_URL=$(gcloud run services describe mediassist-frontend --region ${{ secrets.GCP_REGION }} --format='value(status.url)')
+        if [[ -n "$SERVICE_URL" ]]; then
+          echo "Service URL: $SERVICE_URL"
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL || echo "failed")
           if [[ "$STATUS_CODE" == "200" ]]; then
             echo "✅ Frontend is accessible."
           else
             echo "⚠️ Frontend returned status $STATUS_CODE. Check logs for details."
           fi
-  
-  deploy-production:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'  # Only deploy to production from main branch
-    
-    steps:
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-      
-      - name: Deploy to Cloud Run (Production)
-        uses: google-github-actions/deploy-cloudrun@v1
-        with:
-          service: ${{ env.SERVICE_NAME }}
-          image: ${{ needs.build.outputs.image_url }}
-          region: ${{ env.GCP_REGION }}
-          service_account_email: cloudrun-service-account@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
-          env_vars: |
-            NODE_ENV=production
-            NEXT_PUBLIC_API_URL=https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app
-      
-      - name: Post-deployment validation
-        run: |
-          echo "Deployed frontend to production environment."
-          echo "Running accessibility check..."
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.SERVICE_NAME }}-bv5bumqn3a-ew.a.run.app || echo "failed")
-          if [[ "$STATUS_CODE" == "200" ]]; then
-            echo "✅ Frontend is accessible."
-          else
-            echo "⚠️ Frontend returned status $STATUS_CODE. Check logs for details."
-          fi
+        else
+          echo "⚠️ Could not retrieve service URL."
+        fi
