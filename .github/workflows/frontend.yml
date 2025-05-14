@@ -96,8 +96,7 @@ jobs:
           browser: chrome
           headed: false
           spec: cypress/e2e/auth/**/*.cy.ts
-        # Permet au pipeline de continuer même si certains tests échouent
-        continue-on-error: true
+        continue-on-error: false # true permet de continuer même si les tests échouent 
 
   release:
     name: Release

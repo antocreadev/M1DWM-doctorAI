@@ -87,7 +87,7 @@ export default function LoginPage() {
             Retour à l&apos;accueil
           </Link>
         </Button>
-
+ 
         <Card className="w-full border-teal-200">
           <CardHeader className="space-y-1">
             <div className="flex justify-center mb-2">
