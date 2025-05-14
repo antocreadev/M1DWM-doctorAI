@@ -41,7 +41,7 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl font-bold text-green-900 mb-2">Paramètres</h1>
+        <h1 className="text-2xl font-bold text-teal-900 mb-2">Paramètres</h1>
         <p className="text-gray-600">
           Configurez les paramètres de votre application.
         </p>
@@ -55,7 +55,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-green-600" />
+              <Settings className="h-5 w-5 text-teal-600" />
               Paramètres généraux
             </CardTitle>
             <CardDescription>
@@ -133,7 +133,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5 text-green-600" />
+              <Lock className="h-5 w-5 text-teal-600" />
               Confidentialité
             </CardTitle>
             <CardDescription>
@@ -178,7 +178,7 @@ export default function SettingsPage() {
           <CardFooter>
             <Button
               onClick={handleSave}
-              className="ml-auto bg-green-600 hover:bg-green-700"
+              className="ml-auto bg-teal-600 hover:bg-teal-700"
               disabled={isSaving}
             >
               {isSaving ? (

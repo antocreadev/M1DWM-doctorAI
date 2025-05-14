@@ -113,7 +113,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-3 w-3 rounded-full bg-red-500"></div>
                   <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                  <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                  <div className="h-3 w-3 rounded-full bg-teal-500"></div>
                 </div>
                 <div className="space-y-4">
                   <div className="flex gap-3">

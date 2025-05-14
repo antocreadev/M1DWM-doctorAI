@@ -72,8 +72,8 @@ export default function ProfilePage() {
   // Afficher un état de chargement
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      <div className="flex justify-center items-center h-screen min-w-[80vw]">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
         <span className="ml-2">Chargement des données...</span>
       </div>
     );
@@ -119,7 +119,7 @@ export default function ProfilePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-3xl font-bold text-green-900 mb-2">Mon profil</h1>
+        <h1 className="text-3xl font-bold text-teal-900 mb-2">Mon profil</h1>
         <p className="text-gray-600">Vos informations personnelles</p>
       </motion.div>
 
@@ -267,7 +267,7 @@ export default function ProfilePage() {
                         className="p-3 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          <MessageSquare className="h-4 w-4 text-green-600" />
+                          <MessageSquare className="h-4 w-4 text-teal-600" />
                           <p className="font-medium">{conversation.titre}</p>
                         </div>
                       </div>

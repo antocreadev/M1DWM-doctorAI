@@ -1102,16 +1102,13 @@ def ajouter_message(id):
 
                             # Construire le prompt complet avec les informations contextuelles
                             prompt = f"""
-                            Tu es un assistant médical.
+                            You are a medical assistant.
 
-                            L'utilisateur t'a envoyé plusieurs fichiers que tu dois analyser:
+                            The user has sent you several files that you need to analyze:
 
                             {file_context}
 
-                            IMPORTANT: N'indique PAS explicitement que tu as reçu ou lu ces fichiers dans ta réponse, sauf si l'utilisateur te demande spécifiquement des informations sur ses documents.
-                            Utilise simplement les informations contenues dans ces fichiers pour fournir une réponse précise et pertinente.
-
-                            Voici la question de l'utilisateur:
+                            Here is the user's question:
                             {data["contenu"]}
                             """
                             print("Prompt contextualisé avec fichiers créé")

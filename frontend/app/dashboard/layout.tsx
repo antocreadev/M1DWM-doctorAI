@@ -26,10 +26,22 @@ import {
   LogOut,
   Plus,
   Stethoscope,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Conversation {
   id: number;
@@ -43,52 +55,83 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [conversations, setConversations] = useState([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     console.log("Token:", token);
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me",
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Échec de la récupération des données");
-        }
-
-        const userData = await response.json();
-        setConversations(userData.conversations || []);
-        setLoading(false);
-      } catch (err: unknown) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
-        setLoading(false);
-      }
-    };
-
-    fetchUserData();
+    fetchConversations();
   }, []);
+
+  const fetchConversations = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Échec de la récupération des données");
+      }
+
+      const userData = await response.json();
+      setConversations(userData.conversations || []);
+      setLoading(false);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+      setLoading(false);
+    }
+  };
+
+  const supprimerConversation = async (id: number) => {
+    try {
+      const response = await fetch(
+        `https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/conversations/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Échec de la suppression de la conversation");
+      }
+
+      // Mettre à jour la liste des conversations après la suppression
+      fetchConversations();
+
+      // Si on est sur la page de la conversation supprimée, rediriger vers le dashboard
+      if (pathname === `/dashboard/chat/${id}`) {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      console.error("Erreur lors de la suppression:", err);
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+    }
+  };
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-gray-50 cursor-pointer">
         <Sidebar>
-          <SidebarHeader className="cursor-pointer">
-            <div className="flex items-center gap-2 px-4 py-3">
+          <SidebarHeader className="cursor-pointer ">
+            <div className="flex items-center gap-2 px-4 py-3 hover:bg-teal-100 rounded-xl transition cursor-pointer">
               <Stethoscope className="h-6 w-6 text-teal-600" />
               <h1
-                className="text-xl font-bold text-teal-900"
+                className="text-xl font-bold text-teal-900 cursor-pointer"
                 onClick={() => router.push("/dashboard")}
               >
                 MediAssist
@@ -117,22 +160,59 @@ export default function DashboardLayout({
 
                   {conversations.map((conversation: Conversation) => (
                     <SidebarMenuItem key={conversation.id}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={
-                          pathname === `/dashboard/chat/${conversation.id}`
-                        }
-                        className={
-                          pathname === `/dashboard/chat/${conversation.id}`
-                            ? "bg-teal-100 text-teal-900"
-                            : "text-teal-700 hover:text-teal-900 hover:bg-teal-50"
-                        }
-                      >
-                        <Link href={`/dashboard/chat/${conversation.id}`}>
-                          <HeartPulse className="h-4 w-4" />
-                          <span>{conversation.titre}</span>
-                        </Link>
-                      </SidebarMenuButton>
+                      <div className="flex items-center w-full">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={
+                            pathname === `/dashboard/chat/${conversation.id}`
+                          }
+                          className={`flex-grow ${
+                            pathname === `/dashboard/chat/${conversation.id}`
+                              ? "bg-teal-100 text-teal-900"
+                              : "text-teal-700 hover:text-teal-900 hover:bg-teal-50"
+                          }`}
+                        >
+                          <Link href={`/dashboard/chat/${conversation.id}`}>
+                            <HeartPulse className="h-4 w-4" />
+                            <span>{conversation.titre}</span>
+                          </Link>
+                        </SidebarMenuButton>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 ml-1 text-gray-400 hover:text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Supprimer cette analyse ?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Voulez-vous vraiment supprimer l'analyse "
+                                {conversation.titre}" ? Cette action est
+                                irréversible.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() =>
+                                  supprimerConversation(conversation.id)
+                                }
+                                className="bg-red-500 hover:bg-red-600"
+                              >
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>
@@ -201,20 +281,21 @@ export default function DashboardLayout({
           </SidebarContent>
 
           <SidebarFooter>
-            <div className="p-4">
+            <div className="p-4 cursor-pointer">
               <Button
                 variant="outline"
-                className="w-full justify-start border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+                className="w-full justify-start border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800 cursor-pointer"
                 asChild
               >
                 <Link
+                  className="cursor-pointer"
                   href="/"
                   onClick={() => {
                     localStorage.removeItem("token");
                     router.push("/auth/login");
                   }}
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
+                  <LogOut className="mr-2 h-4 w-4 cursor-pointer" />
                   Déconnexion
                 </Link>
               </Button>

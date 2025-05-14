@@ -89,7 +89,29 @@ export default function NewChatPage() {
         const convData = await convResponse.json();
         setConversationId(convData.id);
 
-        // Envoyer le message à la nouvelle conversation avec les IDs des fichiers
+        console.log("le message est", message);
+
+        // Ajoute les informations utilisateur à la variable message
+        const userInfo = await fetch(
+          "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        const userInfoData = await userInfo.json();
+        console.log("userInfoData", userInfoData);
+        const userInfoMessage = `Here is the user information :  lastname : ${userInfoData.nom},  firstname : ${userInfoData.prenom}, email : ${userInfoData.email}, date of birth : ${userInfoData.date_naissance}, gender : ${userInfoData.genre}, profession : ${userInfoData.profession}, allergies : ${userInfoData.allergies}, medical history : ${userInfoData.antecedents}, medications : ${userInfoData.medicaments}`;
+        console.log("userInfoMessage", userInfoMessage);
+
+        const fullMessage = `${userInfoMessage} ${message}`;
+
+        setMessages((prev) => [
+          ...prev,
+          { role: "user", contenu: fullMessage },
+        ]);
+
         const msgResponse = await fetch(
           `https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/conversations/${convData.id}/messages`,
           {
@@ -176,7 +198,7 @@ export default function NewChatPage() {
 
       <div className="flex-1 overflow-y-auto mb-4 p-4 bg-white rounded-lg border border-teal-100">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+          <div className="flex flex-col items-center justify-center h-full text-center text-teal-500">
             <p className="mb-2">
               Bienvenue dans votre nouvelle analyse médicale
             </p>
@@ -200,22 +222,22 @@ export default function NewChatPage() {
                     ? "ml-auto bg-teal-100 text-teal-900"
                     : msg.role === "system"
                     ? "mx-auto bg-red-100 text-red-800"
-                    : "bg-gray-100 text-gray-900"
+                    : "bg-teal-100 text-teal-900"
                 }`}
               >
                 {msg.contenu}
               </div>
             ))}
             {isLoading && (
-              <div className="bg-gray-100 text-gray-900 p-3 rounded-lg max-w-[80%]">
+              <div className="bg-teal-100 text-teal-900 p-3 rounded-lg max-w-[80%]">
                 <div className="flex space-x-2 items-center">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-teal-500 rounded-full animate-bounce"></div>
                   <div
-                    className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                    className="w-2 h-2 bg-teal-500 rounded-full animate-bounce"
                     style={{ animationDelay: "0.2s" }}
                   ></div>
                   <div
-                    className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                    className="w-2 h-2 bg-teal-500 rounded-full animate-bounce"
                     style={{ animationDelay: "0.4s" }}
                   ></div>
                 </div>

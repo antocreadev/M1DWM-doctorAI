@@ -46,16 +46,16 @@ export default function OnboardingStep4() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-teal-500" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-green-800">
+                  <h3 className="text-sm font-medium text-teal-800">
                     Informations personnelles
                   </h3>
-                  <p className="text-sm text-green-700 mt-1">
+                  <p className="text-sm text-teal-700 mt-1">
                     Vos informations personnelles ont été enregistrées avec
                     succès.
                   </p>
@@ -63,32 +63,32 @@ export default function OnboardingStep4() {
               </div>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-teal-500" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-green-800">
+                  <h3 className="text-sm font-medium text-teal-800">
                     Informations de santé
                   </h3>
-                  <p className="text-sm text-green-700 mt-1">
+                  <p className="text-sm text-teal-700 mt-1">
                     Vos informations de santé ont été enregistrées avec succès.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <Check className="h-5 w-5 text-green-500" />
+                  <Check className="h-5 w-5 text-teal-500" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-green-800">
+                  <h3 className="text-sm font-medium text-teal-800">
                     Documents médicaux
                   </h3>
-                  <p className="text-sm text-green-700 mt-1">
+                  <p className="text-sm text-teal-700 mt-1">
                     Vos documents ont été téléchargés avec succès.
                   </p>
                 </div>

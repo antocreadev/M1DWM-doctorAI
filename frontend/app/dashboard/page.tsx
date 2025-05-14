@@ -229,7 +229,7 @@ export default function Dashboard() {
                 asChild
               >
                 <Link href="/dashboard/profile">
-                  Modifier mon profil
+                  Voir mon profil
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
