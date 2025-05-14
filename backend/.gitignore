@@ -1,0 +1,30 @@
+# Environnement virtuel
+venv/
+env/
+.venv/
+
+# Fichiers Python compilés
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Base de données
+data.db
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+
+# Répertoire d'upload pour les tests
+uploads/
+
+# Couverture de code
+.coverage
+htmlcov/
+coverage.xml
+
+# Fichiers temporaires
+.pytest_cache/
+.DS_Store
