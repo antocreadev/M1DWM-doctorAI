@@ -12,8 +12,34 @@ export default function NewChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [userFiles, setUserFiles] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Récupérer les fichiers de l'utilisateur au chargement du composant
+  useEffect(() => {
+    const fetchUserFiles = async () => {
+      try {
+        const response = await fetch(
+          "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/fichiers",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserFiles(data);
+        }
+      } catch (err) {
+        console.error("Erreur lors de la récupération des fichiers:", err);
+      }
+    };
+
+    fetchUserFiles();
+  }, []);
 
   // Fonction pour faire défiler vers le bas
   const scrollToBottom = () => {
@@ -63,7 +89,7 @@ export default function NewChatPage() {
         const convData = await convResponse.json();
         setConversationId(convData.id);
 
-        // Envoyer le message à la nouvelle conversation
+        // Envoyer le message à la nouvelle conversation avec les IDs des fichiers
         const msgResponse = await fetch(
           `https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/conversations/${convData.id}/messages`,
           {
@@ -72,7 +98,11 @@ export default function NewChatPage() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
-            body: JSON.stringify({ contenu: message }),
+            body: JSON.stringify({ 
+              contenu: message,
+              include_files: true, // Nouvelle option pour indiquer d'inclure les fichiers
+              file_ids: userFiles.map(file => file.id) // Envoyer les IDs des fichiers
+            }),
           }
         );
 
@@ -154,6 +184,11 @@ export default function NewChatPage() {
               Posez votre question pour commencer la conversation avec
               l'assistant médical
             </p>
+            {userFiles.length > 0 && (
+              <p className="mt-4 text-teal-600">
+                {userFiles.length} document(s) disponible(s) pour l'analyse
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

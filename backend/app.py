@@ -105,7 +105,7 @@ ollama_host = os.environ.get(
     "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app"
 )
 OLLAMA_API_URL = ollama_host + "/api/chat"
-model_name = os.environ.get("MODEL_NAME", "tinyllama")
+model_name = os.environ.get("MODEL_NAME", "mistral-small3.1") #mistral-small3.1 #tinyllama
 
 # Variables pour indiquer si Ollama est disponible
 ollama_available = False
@@ -630,10 +630,13 @@ def ajouter_message(id):
           required: [contenu]
           properties:
             contenu: {type: string}
+            include_files: {type: boolean}
+            file_ids: {type: array, items: {type: integer}}
     responses:
       200:
         description: Message ajouté avec réponse IA
     """
+    user_id = get_jwt_identity()
     data = request.json
     message_user = Message(contenu=data["contenu"], role="user", conversation_id=id)
 
@@ -645,9 +648,95 @@ def ajouter_message(id):
     ai_response = ""
     if ollama_available:
         try:
+            # Construction du prompt avec les fichiers si demandé
+            prompt = data["contenu"]
+            
+            # Vérifier si nous devons inclure les fichiers (pour le premier message)
+            if data.get("include_files", False):
+                # Récupérer les fichiers spécifiés (ou tous les fichiers de l'utilisateur)
+                file_ids = data.get("file_ids", [])
+                
+                # Si aucun ID spécifique n'est fourni, récupérer tous les fichiers de l'utilisateur
+                if not file_ids:
+                    fichiers = File.query.filter_by(user_id=user_id).all()
+                else:
+                    fichiers = File.query.filter(File.id.in_(file_ids), File.user_id == user_id).all()
+                
+                # S'il y a des fichiers à inclure
+                if fichiers:
+                    fichiers_content = []
+                    
+                    for fichier in fichiers:
+                        try:
+                            # Extraire le chemin du blob depuis le chemin GCS
+                            gcs_path = fichier.chemin.replace(f"gs://{BUCKET_NAME}/", "")
+                            blob = bucket.blob(gcs_path)
+                            
+                            # Vérifier si le blob existe
+                            if blob.exists():
+                                # Créer un fichier temporaire pour stocker le contenu
+                                with tempfile.NamedTemporaryFile() as temp:
+                                    blob.download_to_filename(temp.name)
+                                    
+                                    # Lire le contenu du fichier
+                                    file_content = ""
+                                    
+                                    # Si c'est un PDF, extraire le texte
+                                    if fichier.nom.lower().endswith('.pdf'):
+                                        with open(temp.name, 'rb') as pdf_file:
+                                            pdf_reader = PdfReader(pdf_file)
+                                            for page in pdf_reader.pages:
+                                                page_text = page.extract_text()
+                                                if page_text:
+                                                    file_content += page_text + "\n"
+                                    else:
+                                        # Pour les autres types de fichiers, essayer de lire comme texte
+                                        try:
+                                            with open(temp.name, 'r', encoding='utf-8') as text_file:
+                                                file_content = text_file.read()
+                                        except UnicodeDecodeError:
+                                            file_content = f"[Contenu binaire non lisible pour {fichier.nom}]"
+                                    
+                                    # Ajouter au contenu des fichiers
+                                    if file_content:
+                                        fichiers_content.append(f">>> FICHIER: {fichier.nom}\n{file_content}\n<<<")
+                        except Exception as e:
+                            logger.error(f"Erreur lors de la lecture du fichier {fichier.nom}: {e}")
+                            continue
+                    
+                    # Si des contenus de fichiers ont été extraits, les ajouter au prompt
+                    if fichiers_content:
+                        file_context = "\n\n".join(fichiers_content)
+                        
+                        # Construire le prompt complet avec les informations contextuelles
+                        # Note: Ce format est invisible pour l'utilisateur mais compréhensible pour l'IA
+                        prompt = f"""
+                        Tu es un assistant médical. 
+                        
+                        L'utilisateur t'a envoyé plusieurs fichiers que tu dois analyser:
+                        
+                        {file_context}
+                        
+                        IMPORTANT: N'indique PAS explicitement que tu as reçu ou lu ces fichiers dans ta réponse, sauf si l'utilisateur te demande spécifiquement des informations sur ses documents.
+                        Utilise simplement les informations contenues dans ces fichiers pour fournir une réponse précise et pertinente.
+                        
+                        Voici la question de l'utilisateur:
+                        {data["contenu"]}
+                        """
+                    else:
+                        # Si aucun contenu de fichier n'a pu être extrait
+                        prompt = data["contenu"]
+                else:
+                    # Si aucun fichier n'est trouvé
+                    prompt = data["contenu"]
+            else:
+                # Utiliser simplement le message de l'utilisateur comme prompt
+                prompt = data["contenu"]
+            
+            # Envoi à l'API de chat
             payload = {
                 "model": model_name,
-                "messages": [{"role": "user", "content": data["contenu"]}],
+                "messages": [{"role": "user", "content": prompt}],
             }
 
             response = requests.post(OLLAMA_API_URL, json=payload, stream=True)
