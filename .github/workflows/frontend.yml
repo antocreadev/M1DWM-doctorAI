@@ -11,159 +11,165 @@ jobs:
   code:
     name: Code Quality
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-        
-    - name: Install dependencies
-      run: |
-        cd frontend
-        npm install
-        
-    - name: Run linters
-      run: |
-        cd frontend
-        npm run lint || true  # Continue on error if lint script exists and fails
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          rm -rf node_modules package-lock.json
+          npm install
+          npx next --help > /dev/null  # Trigger SWC/lightningcss patch
+
+      - name: Run linters
+        run: |
+          cd frontend
+          npm run lint || true  # Don't fail if linter fails
 
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: code
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-        
-    - name: Install dependencies
-      run: |
-        cd frontend
-        npm install
-        
-    - name: Build application
-      run: |
-        cd frontend
-        npm run build
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          rm -rf node_modules package-lock.json
+          npm install
+          npx next --help > /dev/null
+
+      - name: Build application
+        run: |
+          cd frontend
+          npm run build
 
   test:
     name: Test
     runs-on: ubuntu-latest
     needs: build
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-        
-    - name: Install dependencies
-      run: |
-        cd frontend
-        npm install
-        
-    - name: Run tests
-      run: |
-        cd frontend
-        # Run tests if there's a test script, otherwise create a placeholder
-        if grep -q '"test":' package.json; then
-          npm test || echo "Tests completed with warnings"
-        else
-          echo "✅ No tests defined, skipping test phase"
-        fi
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          rm -rf node_modules package-lock.json
+          npm install
+          npx next --help > /dev/null
+
+      - name: Run tests
+        run: |
+          cd frontend
+          if grep -q '"test":' package.json; then
+            npm test || echo "Tests completed with warnings"
+          else
+            echo "✅ No tests defined, skipping test phase"
+          fi
 
   release:
     name: Release
     runs-on: ubuntu-latest
     needs: test
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-        
-    - name: Install dependencies
-      run: |
-        cd frontend
-        npm install
-        
-    - name: Build application for release
-      run: |
-        cd frontend
-        npm run build
-      
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/auth@v1
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
-        
-    - name: Configure Docker for GCP
-      run: |
-        gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
-        
-    - name: Build and push Docker image
-      run: |
-        cd frontend
-        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }} .
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }}
-        
-        # Tag as latest
-        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }} \
-                  ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:latest
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:latest
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          rm -rf node_modules package-lock.json
+          npm install
+          npx next --help > /dev/null
+
+      - name: Build application for release
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for GCP
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build and push Docker image
+        run: |
+          cd frontend
+          docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }} .
+          docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }}
+
+          docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }} \
+                     ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:latest
+          docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:latest
 
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     needs: release
-    
+
     steps:
-    - name: Set up Google Cloud SDK
-      uses: google-github-actions/auth@v1
-      with:
-        credentials_json: ${{ secrets.GCP_SA_KEY }}
-        
-    - name: Deploy to Cloud Run
-      uses: google-github-actions/deploy-cloudrun@v1
-      with:
-        service: mediassist-frontend
-        image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }}
-        region: ${{ secrets.GCP_REGION }}
-        env_vars: |
-          NODE_ENV=production
-          NEXT_PUBLIC_API_URL=https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app
-    
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v1
+        with:
+          service: mediassist-frontend
+          image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mediassist-images/frontend:${{ github.sha }}
+          region: ${{ secrets.GCP_REGION }}
+          env_vars: |
+            NODE_ENV=production
+            NEXT_PUBLIC_API_URL=https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app
+
   operate:
     name: Operate
     runs-on: ubuntu-latest
     needs: deploy
-    
+
     steps:
-    - name: Service Health Check
-      run: |
-        echo "Running post-deployment accessibility check..."
-        sleep 30  # Give the service a moment to stabilize
-        URL="https://mediassist-frontend-bv5bumqn3a-ew.a.run.app"
-        STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $URL || echo "failed")
-        if [[ "$STATUS_CODE" == "200" ]]; then
-          echo "✅ Frontend service is accessible and operational"
-        else
-          echo "⚠️ Frontend service returned status $STATUS_CODE"
-          echo "Service may still be starting up or experiencing issues"
-        fi
+      - name: Service Health Check
+        run: |
+          echo "Running post-deployment accessibility check..."
+          sleep 30
+          URL="https://mediassist-frontend-bv5bumqn3a-ew.a.run.app"
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $URL || echo "failed")
+          if [[ "$STATUS_CODE" == "200" ]]; then
+            echo "✅ Frontend service is accessible and operational"
+          else
+            echo "⚠️ Frontend service returned status $STATUS_CODE"
+            echo "Service may still be starting up or experiencing issues"
+          fi
