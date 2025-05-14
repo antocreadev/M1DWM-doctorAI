@@ -107,7 +107,7 @@ ollama_host = os.environ.get(
     "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app"
 )
 OLLAMA_API_URL = ollama_host + "/api/chat"
-model_name = os.environ.get("MODEL_NAME", "tinyllama")
+model_name = os.environ.get("MODEL_NAME", "llama2:7b")
 
 # Variables pour indiquer si Ollama est disponible
 ollama_available = False
@@ -132,6 +132,330 @@ try:
 except Exception as e:
     print(f"⚠️ Impossible d'initialiser Ollama: {e}")
     print("L'application continuera sans les fonctionnalités d'IA...")
+
+
+import os
+import sys
+import requests
+import json
+import time
+import logging
+
+# Configuration du logging pour plus de détails
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+# Rendre l'hôte Ollama configurable via variable d'environnement
+ollama_host = os.environ.get(
+    "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app"
+)
+
+# Définition des URL correctes pour l'API
+# Si nous avons une réponse à la racine, mais 404 sur /api/status, 
+# c'est que l'API est probablement exposée directement
+OLLAMA_API_URL = ollama_host + "/api/chat"
+OLLAMA_STATUS_URL = ollama_host + "/api/status"
+OLLAMA_PULL_URL = ollama_host + "/api/pull"
+
+# URL alternatives à essayer si les URL standards échouent
+OLLAMA_API_URLS_ALTERNATIVES = [
+    ollama_host + "/chat",             # Sans préfixe /api
+    ollama_host + "/v1/chat/completions"  # Format OpenAI compatible
+]
+
+OLLAMA_STATUS_URLS_ALTERNATIVES = [
+    ollama_host + "/health",
+    ollama_host + "/status",
+    ollama_host              # Simplement la racine, elle peut retourner un statut
+]
+
+
+# Variable pour indiquer si Ollama est disponible
+ollama_available = False
+
+# Nombre maximum de tentatives de connexion
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # secondes
+
+def find_working_api_endpoint():
+    """Essaie de découvrir l'URL d'API qui fonctionne"""
+    global OLLAMA_API_URL, OLLAMA_STATUS_URL
+    
+    print(f"Test de l'URL de base: {ollama_host}")
+    try:
+        response = requests.get(ollama_host, timeout=5)
+        print(f"Réponse de l'URL de base: Code {response.status_code}, Contenu: '{response.text[:100]}'")
+    except Exception as e:
+        print(f"Erreur lors du test de l'URL de base: {e}")
+    
+    # Essai des URL de statut alternatives
+    for url in [OLLAMA_STATUS_URL] + OLLAMA_STATUS_URLS_ALTERNATIVES:
+        try:
+            print(f"Test de l'URL de statut: {url}")
+            response = requests.get(url, timeout=5)
+            print(f"Réponse de {url}: Code {response.status_code}, Contenu: '{response.text[:100]}'")
+            
+            if response.status_code == 200:
+                OLLAMA_STATUS_URL = url
+                print(f"URL de statut trouvée: {OLLAMA_STATUS_URL}")
+                break
+        except Exception as e:
+            print(f"Erreur lors du test de {url}: {e}")
+    
+    # Test simple d'une requête pour identifier une API fonctionnelle
+    test_message = {"role": "user", "content": "Hello"}
+    
+    for url in [OLLAMA_API_URL] + OLLAMA_API_URLS_ALTERNATIVES:
+        try:
+            print(f"Test de l'URL API: {url}")
+            
+            # On essaie différentes structures de payload
+            payloads = [
+                {"model": model_name, "messages": [test_message]},  # Format standard Ollama
+                {"model": model_name, "prompt": "Hello"},           # Format simplifié
+                {"model": model_name, "messages": [test_message], "stream": False},  # Avec stream=False
+                {"messages": [test_message]}                        # Sans spécifier le modèle
+            ]
+            
+            for payload in payloads:
+                try:
+                    print(f"Test de l'URL {url} avec payload: {payload}")
+                    response = requests.post(url, json=payload, timeout=10)
+                    print(f"Réponse de {url}: Code {response.status_code}, Début contenu: '{response.text[:100]}'")
+                    
+                    if response.status_code == 200:
+                        OLLAMA_API_URL = url
+                        print(f"✅ URL API fonctionnelle trouvée: {OLLAMA_API_URL} avec payload: {payload}")
+                        return True
+                    
+                    # Si 400 ou autre erreur similaire, l'endpoint existe mais le format est incorrect
+                    elif 400 <= response.status_code < 500:
+                        print(f"⚠️ L'endpoint existe mais a retourné une erreur {response.status_code}")
+                except Exception as e:
+                    print(f"Erreur spécifique au payload pour {url}: {e}")
+                    
+        except Exception as e:
+            print(f"Erreur lors du test de {url}: {e}")
+    
+    return False
+
+def check_ollama_status():
+    """Vérifier si le serveur Ollama est en ligne"""
+    try:
+        print(f"Vérification du statut d'Ollama sur {OLLAMA_STATUS_URL}...")
+        response = requests.get(OLLAMA_STATUS_URL, timeout=5)
+        if response.status_code == 200:
+            print(f"✅ Le serveur Ollama est en ligne: {response.text}")
+            return True
+        else:
+            print(f"❌ Le serveur Ollama a répondu avec le code {response.status_code}: {response.text}")
+            
+            # Si on a un 404 sur l'URL de statut standard, essayons de trouver la bonne URL
+            if response.status_code == 404:
+                print("Tentative de détection automatique des endpoints...")
+                if find_working_api_endpoint():
+                    return True
+            return False
+    except requests.exceptions.ConnectionError:
+        print(f"❌ Erreur de connexion: impossible de se connecter à {OLLAMA_STATUS_URL}")
+        return False
+    except requests.exceptions.Timeout:
+        print(f"❌ Délai d'attente dépassé lors de la connexion à {OLLAMA_STATUS_URL}")
+        return False
+    except Exception as e:
+        print(f"❌ Erreur lors de la vérification du statut d'Ollama: {e}")
+        return False
+
+def pull_model(model_name):
+    """Télécharger le modèle depuis Ollama avec gestion des erreurs"""
+    print(f"Téléchargement du modèle '{model_name}'...")
+    pull_url = OLLAMA_PULL_URL
+    pull_data = {"name": model_name}
+    
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            print(f"Tentative #{attempt} de téléchargement du modèle via {pull_url}...")
+            response = requests.post(pull_url, json=pull_data, timeout=30)
+            
+            print(f"Réponse brute: {response}")
+            print(f"Contenu: {response.text[:200]}...")  # Afficher le début du contenu
+            
+            if response.status_code == 200:
+                try:
+                    result = response.json()
+                    print(f"✅ Modèle téléchargé avec succès: {json.dumps(result, indent=2)}")
+                    return True
+                except json.JSONDecodeError as jde:
+                    print(f"⚠️ Réponse reçue mais format JSON invalide: {jde}")
+                    print(f"Contenu brut: {response.text[:500]}")
+                    
+                    # Si la réponse est en streaming, elle peut contenir plusieurs lignes JSON
+                    # Essayons de traiter chaque ligne séparément
+                    success = False
+                    try:
+                        for line in response.text.strip().split('\n'):
+                            if line.strip():
+                                line_data = json.loads(line)
+                                print(f"Ligne traitée: {json.dumps(line_data, indent=2)}")
+                                success = True
+                    except Exception as line_error:
+                        print(f"Erreur lors du traitement ligne par ligne: {line_error}")
+                    
+                    return success
+            else:
+                print(f"⚠️ Échec du téléchargement (code {response.status_code}): {response.text}")
+                
+                # Si l'endpoint pull n'existe pas, on considère que le modèle est déjà disponible 
+                # (certaines implémentations d'Ollama n'ont pas l'endpoint pull)
+                if response.status_code == 404:
+                    print("L'endpoint /api/pull n'existe pas. On suppose que le modèle est déjà disponible.")
+                    return True
+                
+            if attempt < MAX_RETRIES:
+                print(f"Nouvelle tentative dans {RETRY_DELAY} secondes...")
+                time.sleep(RETRY_DELAY)
+                
+        except requests.exceptions.ConnectionError:
+            print(f"❌ Erreur de connexion lors de la tentative #{attempt}")
+        except requests.exceptions.Timeout:
+            print(f"❌ Délai d'attente dépassé lors de la tentative #{attempt}")
+        except Exception as e:
+            print(f"❌ Erreur inattendue lors de la tentative #{attempt}: {str(e)}")
+            print(f"Type d'erreur: {type(e).__name__}")
+            
+    print("❌ Échec du téléchargement du modèle après plusieurs tentatives")
+    return False
+
+# Programme principal - Initialisation d'Ollama
+try:
+    print("=" * 50)
+    print(f"INITIALISATION D'OLLAMA")
+    print(f"Hôte: {ollama_host}")
+    print(f"URL API (initiale): {OLLAMA_API_URL}")
+    print(f"URL Statut (initiale): {OLLAMA_STATUS_URL}")
+    print(f"Modèle: {model_name}")
+    print("=" * 50)
+    
+    # Vérifier si Ollama est accessible (cela peut aussi détecter les bonnes URL)
+    if not check_ollama_status():
+        # Si l'API n'est pas accessible via les URL standard, essayer la détection automatique
+        print("Tentative de détection automatique des URL d'API...")
+        if not find_working_api_endpoint():
+            print("⚠️ Le serveur Ollama n'est pas accessible, même après détection automatique")
+            raise ConnectionError("Impossible de se connecter au serveur Ollama")
+    
+    # Si on arrive ici, on a au moins établi une connexion
+    print(f"URL API (finale): {OLLAMA_API_URL}")
+    print(f"URL Statut (finale): {OLLAMA_STATUS_URL}")
+    
+    # On peut considérer qu'Ollama est disponible même sans modèle téléchargé
+    ollama_available = True
+    
+    # Télécharger le modèle (optionnel selon l'implémentation)
+    try:
+        if pull_model(model_name):
+            print(f"✅ Téléchargement du modèle '{model_name}' réussi")
+        else:
+            print(f"⚠️ Échec du téléchargement du modèle '{model_name}', mais l'API est accessible")
+    except Exception as model_error:
+        print(f"⚠️ Erreur lors du téléchargement du modèle: {model_error}")
+        print("L'API reste accessible malgré l'échec du téléchargement")
+    
+    print(f"✅ Initialisation d'Ollama réussie")
+        
+except Exception as e:
+    print(f"⚠️ Erreur lors de l'initialisation d'Ollama: {e}")
+    print(f"Détails de l'erreur: {type(e).__name__}")
+    print(f"L'application continuera sans les fonctionnalités d'IA...")
+    
+    # Afficher la trace complète pour le débogage
+    import traceback
+    print("Trace d'erreur complète:")
+    traceback.print_exc()
+    
+finally:
+    print(f"État final d'Ollama: {'DISPONIBLE' if ollama_available else 'INDISPONIBLE'}")
+    print("=" * 50)
+
+# Fonction pour essayer une requête de chat
+def test_chat_query():
+    if not ollama_available:
+        print("❌ Ollama n'est pas disponible, impossible de tester le chat")
+        return
+        
+    try:
+        print("\nTest d'une requête de chat simple...")
+        
+        # Trois formats courants pour les requêtes chat
+        formats = [
+            # Format standard Ollama
+            {
+                "model": model_name,
+                "messages": [{"role": "user", "content": "Bonjour, comment ça va?"}],
+                "stream": False
+            },
+            # Format OpenAI compatible
+            {
+                "model": model_name,
+                "messages": [{"role": "user", "content": "Bonjour, comment ça va?"}]
+            },
+            # Format simplifié
+            {
+                "model": model_name,
+                "prompt": "Bonjour, comment ça va?"
+            }
+        ]
+        
+        success = False
+        for idx, chat_data in enumerate(formats):
+            try:
+                print(f"\nEssai du format #{idx+1}: {json.dumps(chat_data, indent=2)}")
+                response = requests.post(OLLAMA_API_URL, json=chat_data, timeout=30)
+                
+                print(f"Statut de réponse: {response.status_code}")
+                if response.status_code == 200:
+                    try:
+                        # Essayer de traiter comme un JSON unique
+                        result = response.json()
+                        print(f"✅ Réponse du modèle reçue: {json.dumps(result, indent=2)[:500]}")
+                        success = True
+                        break
+                    except json.JSONDecodeError:
+                        # La réponse pourrait être un flux de JSONs ligne par ligne
+                        print("Tentative de traitement ligne par ligne...")
+                        lines = response.text.strip().split('\n')
+                        if lines:
+                            for i, line in enumerate(lines[:5]):  # Afficher les 5 premières lignes
+                                try:
+                                    if line.strip():
+                                        line_data = json.loads(line)
+                                        print(f"Ligne {i+1}: {json.dumps(line_data, indent=2)}")
+                                        success = True
+                                except json.JSONDecodeError:
+                                    print(f"Ligne {i+1} n'est pas un JSON valide: {line[:100]}")
+                            if success:
+                                break
+                        else:
+                            print(f"Réponse brute: {response.text[:500]}")
+                else:
+                    print(f"❌ Erreur lors de la requête de chat (code {response.status_code}): {response.text[:500]}")
+            except Exception as format_error:
+                print(f"❌ Erreur avec le format #{idx+1}: {format_error}")
+        
+        if success:
+            print("\n✅ Test de chat réussi avec au moins un format!")
+        else:
+            print("\n❌ Tous les formats de requête ont échoué")
+            
+    except Exception as e:
+        print(f"❌ Erreur lors du test de chat: {e}")
+
+# Exécuter le test de chat si Ollama est disponible
+if ollama_available:
+    test_chat_query()
 
 import chromadb
 
