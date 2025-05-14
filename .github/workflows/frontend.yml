@@ -69,12 +69,17 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install dependencies
+      - name: Install dependencies with Bun
         run: |
           cd frontend
           bun install
 
-      # Exécute les tests conventionnels
+      # Génère un package-lock.json pour compatibilité avec Cypress
+      - name: Generate package-lock.json for Cypress
+        run: |
+          cd frontend
+          bun x npm install --package-lock-only
+
       - name: Run conventional tests
         run: |
           cd frontend
@@ -84,8 +89,7 @@ jobs:
           else
             echo "✅ No conventional tests defined, skipping this step"
           fi
-          
-      # Exécute les tests Cypress
+
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
@@ -96,7 +100,7 @@ jobs:
           browser: chrome
           headed: false
           spec: cypress/e2e/auth/**/*.cy.ts
-        continue-on-error: false # true permet de continuer même si les tests échouent 
+        continue-on-error: false
 
   release:
     name: Release
