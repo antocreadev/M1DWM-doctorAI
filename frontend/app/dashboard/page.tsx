@@ -18,9 +18,17 @@ import {
   Pill,
   Microscope,
   Stethoscope,
+  Calendar,
+  Phone,
+  Mail,
+  MapPin,
+  Cake,
+  AlertCircle,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface UserData {
   nom?: string;
@@ -35,15 +43,26 @@ interface UserData {
   allergies?: string;
   antecedents?: string;
   medicaments?: string;
+  groupe_sanguin?: string;
+  derniere_consultation?: string;
 }
 
 export default function Dashboard() {
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  const router = useRouter();
   useEffect(() => {
     const token = localStorage.getItem("token");
-    console.log("Token:", token);
-    // Fetch user data or perform any necessary actions
+    if (!token) {
+      console.error("No token found");
+      setLoading(false);
+      // enlevez le token et redirigez vers la page de connexion
+      localStorage.removeItem("token");
+      router.push("/auth/login");
+      return;
+    }
+
     fetch("https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/me", {
       method: "GET",
       headers: {
@@ -51,306 +70,158 @@ export default function Dashboard() {
         Authorization: `Bearer ${token}`,
       },
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Échec de récupération des données");
+        }
+        return response.json();
+      })
       .then((data) => {
         console.log("User data fetched successfully:", data);
         setUserData(data);
+        setLoading(false);
       })
       .catch((error) => {
         console.error("Error fetching user data:", error);
+        setLoading(false);
+        // En cas d'erreur, redirigez vers la page de connexion
+        localStorage.removeItem("token");
+        router.push("/auth/login");
       });
   }, []);
-  if (!userData) {
-    return <div className="text-teal-600">Chargement des données...</div>;
-  }
 
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2 mb-4">
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Nom:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.nom || "—"}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Prénom:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.prenom || "—"}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Email:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.email || "—"}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Téléphone:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.telephone || "—"}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Adresse:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.adresse}, {userData?.ville} {userData?.code_postal}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Date de naissance:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.date_naissance}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Genre:</span>
-          <span className="font-medium text-teal-900">{userData?.genre}</span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Allergies:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.allergies || "Aucune"}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Antécédents:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.antecedents || "—"}
-          </span>
-        </div>
-        <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-          <span className="text-teal-600">Médicaments:</span>
-          <span className="font-medium text-teal-900">
-            {userData?.medicaments || "—"}
-          </span>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-w-[80vw]">
+        <div className="animate-pulse text-teal-600 text-lg min-w-[80vw]">
+          Chargement des données...
         </div>
       </div>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen min-w-[80vw]">
+        <div className="text-red-600 text-lg min-w-[80vw]">
+          Impossible de charger vos données. Veuillez vous reconnecter.
+        </div>
+      </div>
+    );
+  }
+
+  const userFullName =
+    `${userData.prenom || ""} ${userData.nom || ""}`.trim() || "—";
+  const userAddress =
+    [userData.adresse, userData.ville, userData.code_postal]
+      .filter(Boolean)
+      .join(", ") || "—";
+
+  return (
+    <div className="space-y-6 p-4 max-w-7xl mx-auto min-w-[80vw]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="bg-teal-50 p-6 rounded-lg shadow-sm border border-teal-100"
       >
         <h1 className="text-2xl font-bold text-teal-900 mb-2">
-          Bienvenue sur MediAssist
+          Bienvenue, {userData.prenom || ""}
         </h1>
         <p className="text-teal-700">
           Votre assistant médical intelligent est prêt à analyser vos données.
         </p>
       </motion.div>
 
-      {/* Medical stats */}
+      {/* Profil utilisateur */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
       >
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-teal-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-teal-700 font-medium">
-                    Tension artérielle
-                  </p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">
-                    120/80
-                  </p>
-                  <p className="text-xs text-teal-600 mt-1">
-                    Dernière mesure: 10/05/2025
-                  </p>
+        <Card className="border-teal-200 overflow-hidden">
+          <CardHeader className="bg-teal-50 pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5 text-teal-600" />
+              Profil Patient
+            </CardTitle>
+            <CardDescription className="text-teal-700">
+              Vos informations personnelles
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <User className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">Nom:</span>
+                  <span className="text-teal-900 ml-auto">{userFullName}</span>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
-                  <Activity className="h-6 w-6 text-teal-600" />
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <Mail className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">Email:</span>
+                  <span className="text-teal-900 ml-auto">
+                    {userData.email || "—"}
+                  </span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-teal-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-teal-700 font-medium">Glycémie</p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">
-                    5.4 mmol/L
-                  </p>
-                  <p className="text-xs text-teal-600 mt-1">
-                    Dernière mesure: 12/05/2025
-                  </p>
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <Phone className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">Téléphone:</span>
+                  <span className="text-teal-900 ml-auto">
+                    {userData.telephone || "—"}
+                  </span>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
-                  <Microscope className="h-6 w-6 text-teal-600" />
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <MapPin className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">Adresse:</span>
+                  <span className="text-teal-900 ml-auto">{userAddress}</span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-teal-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-teal-700 font-medium">
-                    Cholestérol
-                  </p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">
-                    4.2 mmol/L
-                  </p>
-                  <p className="text-xs text-teal-600 mt-1">
-                    Dernière mesure: 08/05/2025
-                  </p>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
-                  <HeartPulse className="h-6 w-6 text-teal-600" />
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <Cake className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">
+                    Date de naissance:
+                  </span>
+                  <span className="text-teal-900 ml-auto">
+                    {userData.date_naissance || "—"}
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-teal-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-teal-700 font-medium">
-                    Médicaments
-                  </p>
-                  <p className="text-2xl font-bold text-teal-900 mt-1">
-                    2 actifs
-                  </p>
-                  <p className="text-xs text-teal-600 mt-1">
-                    Dernière mise à jour: 15/05/2025
-                  </p>
+              <div className="space-y-1 border-t md:border-t-0 md:border-l border-teal-100 md:pl-4 pt-4 md:pt-0">
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <User className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">Genre:</span>
+                  <span className="text-teal-900 ml-auto">
+                    {userData.genre || "—"}
+                  </span>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center">
-                  <Pill className="h-6 w-6 text-teal-600" />
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <AlertCircle className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">Allergies:</span>
+                  <span className="text-teal-900 ml-auto">
+                    {userData.allergies || "Aucune"}
+                  </span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </motion.div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Card className="h-full border-teal-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <HeartPulse className="h-5 w-5 text-teal-600" />
-                Analyses récentes
-              </CardTitle>
-              <CardDescription className="text-teal-700">
-                Consultez vos analyses médicales récentes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 mb-4">
-                <li className="text-sm text-teal-800 border-l-2 border-teal-600 pl-3 py-1 font-medium">
-                  Analyse sanguine
-                </li>
-                <li className="text-sm text-teal-700 border-l-2 border-teal-200 pl-3 py-1 hover:border-teal-600 transition-colors">
-                  Suivi cardiaque
-                </li>
-                <li className="text-sm text-teal-700 border-l-2 border-teal-200 pl-3 py-1 hover:border-teal-600 transition-colors">
-                  Consultation neurologie
-                </li>
-              </ul>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
-                asChild
-              >
-                <Link href="/dashboard/new-chat">
-                  Nouvelle analyse
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <Card className="h-full border-teal-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5 text-teal-600" />
-                Documents
-              </CardTitle>
-              <CardDescription className="text-teal-700">
-                Gérez vos documents médicaux
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2 mb-4">
-                <li className="text-sm text-teal-700 flex items-center gap-2 p-2 rounded-md hover:bg-teal-50 transition-colors">
-                  <FileText className="h-4 w-4 text-teal-600" />
-                  <span className="flex-1">resultats_analyses.pdf</span>
-                  <span className="text-xs text-teal-500">12 mai</span>
-                </li>
-                <li className="text-sm text-teal-700 flex items-center gap-2 p-2 rounded-md hover:bg-teal-50 transition-colors">
-                  <FileText className="h-4 w-4 text-teal-600" />
-                  <span className="flex-1">imagerie_thorax.jpg</span>
-                  <span className="text-xs text-teal-500">15 mai</span>
-                </li>
-                <li className="text-sm text-teal-700 flex items-center gap-2 p-2 rounded-md hover:bg-teal-50 transition-colors">
-                  <FileText className="h-4 w-4 text-teal-600" />
-                  <span className="flex-1">ordonnance.pdf</span>
-                  <span className="text-xs text-teal-500">18 mai</span>
-                </li>
-              </ul>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
-                asChild
-              >
-                <Link href="/dashboard/documents">
-                  Gérer les documents
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Card className="h-full border-teal-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-teal-600" />
-                Profil médical
-              </CardTitle>
-              <CardDescription className="text-teal-700">
-                Gérez vos informations médicales
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-                  <span className="text-teal-600">Nom:</span>
-                  <span className="font-medium text-teal-900">Jean Dupont</span>
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <ClipboardList className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">
+                    Antécédents:
+                  </span>
+                  <span className="text-teal-900 ml-auto">
+                    {userData.antecedents || "Aucun"}
+                  </span>
                 </div>
-                <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-                  <span className="text-teal-600">Groupe sanguin:</span>
-                  <span className="font-medium text-teal-900">A+</span>
-                </div>
-                <div className="flex justify-between text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
-                  <span className="text-teal-600">Allergies:</span>
-                  <span className="font-medium text-teal-900">Pénicilline</span>
+                <div className="flex items-center gap-2 text-sm p-2 rounded-md hover:bg-teal-50 transition-colors">
+                  <Pill className="h-4 w-4 text-teal-600" />
+                  <span className="text-teal-600 font-medium">
+                    Médicaments:
+                  </span>
+                  <span className="text-teal-900 ml-auto">
+                    {userData.medicaments || "Aucun"}
+                  </span>
                 </div>
               </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-teal-100">
               <Button
                 variant="outline"
                 size="sm"
@@ -358,21 +229,21 @@ export default function Dashboard() {
                 asChild
               >
                 <Link href="/dashboard/profile">
-                  Modifier le profil
+                  Modifier mon profil
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
       >
-        <Card className="border-teal-200">
+        <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-teal-100 hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Stethoscope className="h-5 w-5 text-teal-600" />

@@ -52,6 +52,10 @@ export default function LoginPage() {
         // met le token dans le localStorage
         localStorage.setItem("token", token);
         // redirige vers la page d'accueil
+        if (data.message === "Identifiants invalides") {
+          alert("Identifiants invalides");
+          return;
+        }
         router.push("/dashboard");
       })
       .catch((error) => {

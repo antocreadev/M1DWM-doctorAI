@@ -84,7 +84,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-[80vw]">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <h1 className="text-2xl font-bold text-teal-900 mb-2">Mes documents médicaux</h1>
         <p className="text-teal-700">Gérez vos documents médicaux et téléchargez de nouveaux fichiers.</p>

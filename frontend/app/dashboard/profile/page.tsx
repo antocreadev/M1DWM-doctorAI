@@ -26,9 +26,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-[80vw]">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <h1 className="text-2xl font-bold text-violet-900 mb-2">Mon profil</h1>
+        <h1 className="text-2xl font-bold text-green-900 mb-2">Mon profil</h1>
         <p className="text-gray-600">Gérez vos informations personnelles et vos préférences.</p>
       </motion.div>
 
@@ -104,7 +104,7 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button onClick={handleSave} className="ml-auto bg-violet-600 hover:bg-violet-700" disabled={isSaving}>
+                <Button onClick={handleSave} className="ml-auto bg-green-600 hover:bg-green-700" disabled={isSaving}>
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -158,7 +158,7 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button onClick={handleSave} className="ml-auto bg-violet-600 hover:bg-violet-700" disabled={isSaving}>
+                <Button onClick={handleSave} className="ml-auto bg-green-600 hover:bg-green-700" disabled={isSaving}>
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -243,7 +243,7 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button onClick={handleSave} className="ml-auto bg-violet-600 hover:bg-violet-700" disabled={isSaving}>
+                <Button onClick={handleSave} className="ml-auto bg-green-600 hover:bg-green-700" disabled={isSaving}>
                   {isSaving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -29,13 +29,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import { useRouter } from "next/navigation";
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [conversations, setConversations] = useState([
     { id: 1, title: "Analyse sanguine", date: "12 mai 2025" },
     { id: 2, title: "Suivi cardiaque", date: "15 mai 2025" },
@@ -46,10 +47,15 @@ export default function DashboardLayout({
     <SidebarProvider>
       <div className="flex h-screen bg-gray-50">
         <Sidebar>
-          <SidebarHeader>
+          <SidebarHeader className="cursor-pointer">
             <div className="flex items-center gap-2 px-4 py-3">
               <Stethoscope className="h-6 w-6 text-teal-600" />
-              <h1 className="text-xl font-bold text-teal-900">MediAssist</h1>
+              <h1
+                className="text-xl font-bold text-teal-900"
+                onClick={() => router.push("/dashboard")}
+              >
+                MediAssist
+              </h1>
             </div>
           </SidebarHeader>
 

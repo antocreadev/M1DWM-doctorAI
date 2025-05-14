@@ -36,7 +36,7 @@ export default function OnboardingStep3() {
     // Simulate upload
     setTimeout(() => {
       setUploading(false);
-      router.push("/dashboard");
+      router.push("/auth/login");
     }, 2000);
   };
 

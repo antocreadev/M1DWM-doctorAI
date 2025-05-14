@@ -31,45 +31,64 @@ export default function OnboardingStep2() {
   const user = useStore.getState().user;
 
   const handleNext = () => {
-    const formData = new FormData(formRef.current as HTMLFormElement);
-    const terms = formData.get("terms");
-    const dataProcessing = formData.get("data-processing");
-    // convert terms and dataProcessing to boolean
-    const termsAccepted = terms === "on" ? true : false;
-    const dataProcessingAccepted = dataProcessing === "on" ? true : false;
-    const data = {
-      medicalDetails: formData.get("medical-details") || "",
-      medicationDetails: formData.get("medication-details") || "",
-      allergiesDetails: formData.get("allergies-details") || "",
-      terms: formData.get("terms") || false,
-      dataProcessing: formData.get("data-processing") || false,
+    if (!formRef.current) return;
+
+    const formData = new FormData(formRef.current);
+
+    // Correct handling of checkbox values
+    const termsAccepted = formData.get("terms") === "on";
+    const dataProcessingAccepted = formData.get("data-processing") === "on";
+
+    // Update the user object with the new data
+    const updatedUser = {
+      ...user,
+      antecedents: formData.get("medical-details")?.toString() || "",
+      medicaments: formData.get("medication-details")?.toString() || "",
+      allergies: formData.get("allergies-details")?.toString() || "",
+      terms: termsAccepted,
+      dataProcessing: dataProcessingAccepted,
     };
 
-    setUser({
-      ...user,
-      antecedents: data.medicalDetails,
-      medicaments: data.medicationDetails,
-      allergies: data.allergiesDetails,
-      terms: data.terms,
-      dataProcessing: data.dataProcessing,
-    } as User);
+    console.log("medical-details", formData.get("medical-details"));
+    console.log("medication-details", formData.get("medication-details"));
+    console.log("allergies-details", formData.get("allergies-details"));
+    console.log("terms", termsAccepted);
+    console.log("data-processing", dataProcessingAccepted);
+    console.log("updatedUser", updatedUser);
 
-    console.log(user);
+    // First update the local state
+    setUser(updatedUser);
 
-    fetch("https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    })
-      .then((response) => response.json())
+    console.log("user", user);
+
+    // Then make the API call with the updated user data
+    fetch(
+      "https://mediassist-backend-with-sql-bv5bumqn3a-ew.a.run.app/register",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedUser),
+      }
+    )
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
       .then((data) => {
         console.log("Success:", data);
-        router.push("/onboarding/step-3");
+        if (data.message === "Utilisateur enregistré") {
+          router.push("/onboarding/step-3");
+        } else {
+          alert(data.message || "Une erreur est survenue");
+        }
       })
       .catch((error) => {
         console.error("Error:", error);
+        alert("Erreur de connexion au serveur. Veuillez réessayer.");
       });
   };
 
@@ -102,7 +121,7 @@ export default function OnboardingStep2() {
                 <HeartPulse className="h-4 w-4" /> Avez-vous des antécédents
                 médicaux particuliers?
               </Label>
-              <RadioGroup defaultValue="no">
+              <RadioGroup defaultValue="no" name="medical-history">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem
                     value="yes"
@@ -146,7 +165,7 @@ export default function OnboardingStep2() {
                 <Pill className="h-4 w-4" /> Prenez-vous actuellement des
                 médicaments?
               </Label>
-              <RadioGroup defaultValue="no">
+              <RadioGroup defaultValue="no" name="medication">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem
                     value="yes"
@@ -186,7 +205,7 @@ export default function OnboardingStep2() {
               <Label className="text-teal-700 flex items-center gap-1">
                 <AlertCircle className="h-4 w-4" /> Avez-vous des allergies?
               </Label>
-              <RadioGroup defaultValue="no">
+              <RadioGroup defaultValue="no" name="allergies">
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem
                     value="yes"

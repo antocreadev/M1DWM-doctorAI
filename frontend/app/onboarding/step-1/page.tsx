@@ -71,7 +71,7 @@ export default function OnboardingStep1() {
       ...user,
       date_naissance: birthdate,
       genre: data.gender,
-      adresse : data.address,
+      adresse: data.address,
       ville: data.city,
       code_postal: data.postalCode,
       telephone: data.phone,
@@ -137,9 +137,6 @@ export default function OnboardingStep1() {
                     <SelectItem value="male">Homme</SelectItem>
                     <SelectItem value="female">Femme</SelectItem>
                     <SelectItem value="other">Autre</SelectItem>
-                    <SelectItem value="prefer-not-to-say">
-                      Je préfère ne pas répondre
-                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
