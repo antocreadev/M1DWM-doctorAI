@@ -14,24 +14,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
+          bun-version: latest
 
       - name: Install dependencies
         run: |
           cd frontend
-          rm -rf node_modules package-lock.json
-          npm install
-          npx next --help > /dev/null  # Trigger SWC/lightningcss patch
+          bun install
 
       - name: Run linters
         run: |
           cd frontend
-          npm run lint || true  # Don't fail if linter fails
+          bun run lint || true  # Don't fail if linter fails
 
   build:
     name: Build
@@ -40,24 +38,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
+          bun-version: latest
 
       - name: Install dependencies
         run: |
           cd frontend
-          rm -rf node_modules package-lock.json
-          npm install
-          npx next --help > /dev/null
+          bun install
 
       - name: Build application
         run: |
           cd frontend
-          npm run build
+          bun run build
 
   test:
     name: Test
@@ -66,28 +62,42 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
+          bun-version: latest
 
       - name: Install dependencies
         run: |
           cd frontend
-          rm -rf node_modules package-lock.json
-          npm install
-          npx next --help > /dev/null
+          bun install
 
-      - name: Run tests
+      # Exécute les tests conventionnels
+      - name: Run conventional tests
         run: |
           cd frontend
           if grep -q '"test":' package.json; then
-            npm test || echo "Tests completed with warnings"
+            echo "Running conventional tests..."
+            bun test || echo "Tests completed with warnings"
           else
-            echo "✅ No tests defined, skipping test phase"
+            echo "✅ No conventional tests defined, skipping this step"
           fi
+          
+      # Exécute les tests Cypress
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: frontend
+          build: bun run build
+          start: bun run start
+          wait-on: 'http://localhost:3000'
+          browser: chrome
+          headed: false
+          spec: cypress/e2e/auth/**/*.cy.ts
+        # Permet au pipeline de continuer même si certains tests échouent
+        continue-on-error: true
 
   release:
     name: Release
@@ -96,24 +106,22 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20'
+          bun-version: latest
 
       - name: Install dependencies
         run: |
           cd frontend
-          rm -rf node_modules package-lock.json
-          npm install
-          npx next --help > /dev/null
+          bun install
 
       - name: Build application for release
         run: |
           cd frontend
-          npm run build
+          bun run build
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/auth@v1

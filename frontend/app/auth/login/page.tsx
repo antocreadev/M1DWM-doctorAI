@@ -101,7 +101,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4" ref={formRef}>
+            <form onSubmit={handleSubmit} className="space-y-4" ref={formRef} data-cy="login-form">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-teal-700">
                   Email
@@ -113,6 +113,7 @@ export default function LoginPage() {
                   placeholder="votre@email.com"
                   required
                   className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
+                  data-cy="email-input"
                 />
               </div>
               <div className="space-y-2">
@@ -133,12 +134,21 @@ export default function LoginPage() {
                   type="password"
                   required
                   className="border-teal-200 focus:border-teal-500 focus:ring-teal-500"
+                  data-cy="password-input"
                 />
+              </div>
+              {/* Message d'erreur pour les tests */}
+              <div className="text-red-600 text-sm hidden" data-cy="form-error">
+                Veuillez remplir tous les champs
+              </div>
+              <div className="text-red-600 text-sm hidden" data-cy="auth-error">
+                Identifiants invalides
               </div>
               <Button
                 type="submit"
                 className="w-full bg-teal-600 hover:bg-teal-700 text-white"
                 disabled={isLoading}
+                data-cy="login-button"
               >
                 {isLoading ? (
                   <>

@@ -9,7 +9,12 @@
     "lint": "next lint",
     "cypress": "cypress open",
     "cypress:run": "cypress run",
-    "test": "cypress run"
+    "test": "cypress run",
+    "test:auth": "cypress run --spec 'cypress/e2e/auth/**/*.cy.ts'",
+    "test:dashboard": "cypress run --spec 'cypress/e2e/dashboard/**/*.cy.ts'",
+    "test:e2e": "cypress run --spec 'cypress/e2e/e2e-flow.cy.ts'",
+    "test:all": "start-server-and-test dev 3000 cypress:run",
+    "test:dev": "start-server-and-test dev 3000 cypress"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.13",
@@ -44,6 +49,7 @@
     "cypress": "^14.3.3",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
+    "start-server-and-test": "^2.0.11",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.9",
     "typescript": "^5"
