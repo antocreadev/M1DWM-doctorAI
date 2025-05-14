@@ -107,7 +107,7 @@ ollama_host = os.environ.get(
     "OLLAMA_HOST", "https://ollama-gemma-bv5bumqn3a-ew.a.run.app"
 )
 OLLAMA_API_URL = ollama_host + "/api/chat"
-model_name = os.environ.get("MODEL_NAME", "llama2:7b")
+model_name = os.environ.get("MODEL_NAME", "tinyllama")
 
 # Variables pour indiquer si Ollama est disponible
 ollama_available = False
