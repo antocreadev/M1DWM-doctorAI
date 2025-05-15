@@ -218,6 +218,7 @@ export default function OnboardingStep1() {
           <Button
             onClick={handleNext}
             className="bg-teal-600 hover:bg-teal-700 text-white"
+            data-cy="next-button"
           >
             Suivant
             <ArrowRight className="ml-2 h-4 w-4" />

@@ -303,6 +303,7 @@ export default function OnboardingStep2() {
             variant="outline"
             onClick={handleBack}
             className="border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+            data-cy="back-button"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Précédent
@@ -310,6 +311,7 @@ export default function OnboardingStep2() {
           <Button
             onClick={handleNext}
             className="bg-teal-600 hover:bg-teal-700 text-white"
+            data-cy="next-button"
           >
             Suivant
             <ArrowRight className="ml-2 h-4 w-4" />
