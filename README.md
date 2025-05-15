@@ -69,3 +69,13 @@ docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 docker pull chromadb/chroma
 docker run -v ./chroma-data:/data -p 8000:8000 chromadb/chroma
 ```
+
+# Lancer les tests
+```bash
+# Ouvrir l'interface Cypress
+npx cypress open
+# Exécuter tous les tests
+npx cypress run
+# Exécuter uniquement certains tests
+npx cypress run --spec 'cypress/e2e/auth/**/*.cy.ts,cypress/e2e/dashboard/**/*.cy.ts'
+```

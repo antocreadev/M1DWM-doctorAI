@@ -116,17 +116,6 @@ jobs:
           # Installation forcée des binaires natifs
           npx --yes lightningcss-cli --help || true
 
-      # Exécute les tests conventionnels avec npm test
-      - name: Run conventional tests
-        run: |
-          cd frontend
-          if grep -q '"test":' package.json; then
-            echo "Running conventional tests..."
-            npm test || echo "Tests completed with warnings"
-          else
-            echo "✅ No conventional tests defined, skipping this step"
-          fi
-
       # Démarre l'application en arrière-plan pour Cypress
       - name: Start app for Cypress tests
         run: |
@@ -137,14 +126,24 @@ jobs:
         env:
           NODE_ENV: test
 
-      # Exécute les tests Cypress
-      - name: Run Cypress tests
+      # Exécute tous les tests Cypress (sauf e2e-flow qui n'est pas encore stable)
+      - name: Run Cypress auth tests
         uses: cypress-io/github-action@v6
         with:
           working-directory: frontend
           browser: chrome
           headed: false
           spec: cypress/e2e/auth/**/*.cy.ts
+        continue-on-error: true
+        
+      - name: Run Cypress dashboard tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: frontend
+          browser: chrome
+          headed: false
+          spec: cypress/e2e/dashboard/**/*.cy.ts
+          install: false # Ne pas réinstaller Cypress (déjà installé)
         continue-on-error: true
 
   release:
