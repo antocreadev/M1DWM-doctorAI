@@ -44,40 +44,35 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
-      - name: Install dependencies with npm
+          
+      # Installer les dépendances système requises pour la compilation
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3
+      
+      # Solution radicale : nettoyer le cache npm et les node_modules
+      - name: Clean installation with cache reset
         run: |
           cd frontend
-          npm ci
+          rm -rf node_modules
+          npm cache clean --force
+          rm -f package-lock.json
+          npm install
 
-      # Solution plus robuste pour le problème LightningCSS
-      - name: Create tailwind.config.js temporaire pour CI
+      # Approche particulière pour résoudre le problème LightningCSS
+      - name: Fix LightningCSS compatibility
         run: |
           cd frontend
-          # Sauvegarde de la configuration originale
-          if [ -f tailwind.config.js ]; then
-            cp tailwind.config.js tailwind.config.js.bak
-          fi
-          # Création d'une configuration simplifiée sans JIT pour le build CI
-          cat > tailwind.config.js << EOL
-          module.exports = {
-            mode: 'aot', // Utiliser AOT au lieu de JIT
-            content: [
-              './app/**/*.{js,ts,jsx,tsx,mdx}',
-              './pages/**/*.{js,ts,jsx,tsx,mdx}',
-              './components/**/*.{js,ts,jsx,tsx,mdx}'
-            ],
-            theme: {
-              extend: {},
-            },
-            plugins: [],
-          }
-          EOL
+          npm install -g node-gyp
+          npm install --save-dev lightningcss
+          # Installation forcée des binaires natifs
+          npx --yes lightningcss-cli --help || true
           
       - name: Build application
         run: |
           cd frontend
-          npm run build
+          NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
   test:
     name: Test
@@ -98,12 +93,6 @@ jobs:
         run: |
           cd frontend
           npm ci
-
-      # Fix pour LightningCSS
-      - name: Fix LightningCSS binaries
-        run: |
-          cd frontend
-          npm rebuild lightningcss --platform=linux --arch=x64
 
       # Exécute les tests conventionnels avec npm test
       - name: Run conventional tests
@@ -150,21 +139,28 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install dependencies with npm
+      # Solution radicale : nettoyer le cache npm et les node_modules
+      - name: Clean installation with cache reset
         run: |
           cd frontend
-          npm ci
+          rm -rf node_modules
+          npm cache clean --force
+          rm -f package-lock.json
+          npm install
 
-      # Fix pour LightningCSS
-      - name: Fix LightningCSS binaries
+      # Approche particulière pour résoudre le problème LightningCSS
+      - name: Fix LightningCSS compatibility
         run: |
           cd frontend
-          npm rebuild lightningcss --platform=linux --arch=x64
+          npm install -g node-gyp
+          npm install --save-dev lightningcss
+          # Installation forcée des binaires natifs
+          npx --yes lightningcss-cli --help || true
 
       - name: Build application for release
         run: |
           cd frontend
-          npm run build
+          NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/auth@v1
