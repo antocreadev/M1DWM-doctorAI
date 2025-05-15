@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    swcPlugins: [],
+    optimizeCss: {
+      lightningCss: {
+        implementation: "wasm", // Forcer usage du fallback WebAssembly
+      },
+    },
+  },
 };
 
 export default nextConfig;
