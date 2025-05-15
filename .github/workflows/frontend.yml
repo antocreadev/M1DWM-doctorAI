@@ -93,6 +93,28 @@ jobs:
         run: |
           cd frontend
           npm ci
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3
+      
+      # Solution radicale : nettoyer le cache npm et les node_modules
+      - name: Clean installation with cache reset
+        run: |
+          cd frontend
+          rm -rf node_modules
+          npm cache clean --force
+          rm -f package-lock.json
+          npm install
+
+      # Approche particulière pour résoudre le problème LightningCSS
+      - name: Fix LightningCSS compatibility
+        run: |
+          cd frontend
+          npm install -g node-gyp
+          npm install --save-dev lightningcss
+          # Installation forcée des binaires natifs
+          npx --yes lightningcss-cli --help || true
 
       # Exécute les tests conventionnels avec npm test
       - name: Run conventional tests
