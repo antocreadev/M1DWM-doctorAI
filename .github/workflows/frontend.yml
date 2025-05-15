@@ -40,20 +40,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          bun-version: latest
+          node-version: 18
 
-      - name: Install dependencies
+      - name: Install dependencies with npm
         run: |
           cd frontend
-          bun install
+          npm ci
 
+      # Fix pour LightningCSS
+      - name: Fix LightningCSS binaries
+        run: |
+          cd frontend
+          npm rebuild lightningcss --platform=linux --arch=x64
+          
       - name: Build application
         run: |
           cd frontend
-          bun run build
+          npm run build
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -73,6 +80,12 @@ jobs:
         run: |
           cd frontend
           npm ci
+
+      # Fix pour LightningCSS
+      - name: Fix LightningCSS binaries
+        run: |
+          cd frontend
+          npm rebuild lightningcss --platform=linux --arch=x64
 
       # Exécute les tests conventionnels avec npm test
       - name: Run conventional tests
@@ -114,20 +127,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          bun-version: latest
+          node-version: 18
 
-      - name: Install dependencies
+      - name: Install dependencies with npm
         run: |
           cd frontend
-          bun install
+          npm ci
+
+      # Fix pour LightningCSS
+      - name: Fix LightningCSS binaries
+        run: |
+          cd frontend
+          npm rebuild lightningcss --platform=linux --arch=x64
 
       - name: Build application for release
         run: |
           cd frontend
-          bun run build
+          npm run build
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/auth@v1
