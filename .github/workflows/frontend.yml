@@ -126,7 +126,7 @@ jobs:
         env:
           NODE_ENV: test
 
-      # Exécute les tests Cypress
+      # Exécute tous les tests Cypress (sauf e2e-flow qui n'est pas encore stable)
       - name: Run Cypress auth tests
         uses: cypress-io/github-action@v6
         with:
@@ -155,33 +155,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: 18
+          bun-version: latest
 
-      # Solution radicale : nettoyer le cache npm et les node_modules
-      - name: Clean installation with cache reset
+      - name: Install dependencies
         run: |
           cd frontend
-          rm -rf node_modules
-          npm cache clean --force
-          rm -f package-lock.json
-          npm install
-
-      # Approche particulière pour résoudre le problème LightningCSS
-      - name: Fix LightningCSS compatibility
-        run: |
-          cd frontend
-          npm install -g node-gyp
-          npm install --save-dev lightningcss
-          # Installation forcée des binaires natifs
-          npx --yes lightningcss-cli --help || true
+          bun install
 
       - name: Build application for release
         run: |
           cd frontend
-          NODE_OPTIONS="--max-old-space-size=4096" npm run build
+          bun run build
 
       - name: Set up Google Cloud SDK
         uses: google-github-actions/auth@v1
