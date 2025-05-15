@@ -9,11 +9,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     swcPlugins: [],
-    optimizeCss: {
-      lightningCss: {
-        implementation: "wasm", // Forcer usage du fallback WebAssembly
-      },
-    },
+    optimizeCss: false
+    
   },
 };
 
