@@ -66,3 +66,4 @@ jobs:
 
       - name: Deploy the app
         run: npm run deploy
+ 
