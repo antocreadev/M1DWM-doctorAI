@@ -126,7 +126,7 @@ jobs:
         env:
           NODE_ENV: test
 
-      # Exécute tous les tests Cypress (sauf e2e-flow qui n'est pas encore stable)
+      # Exécute les tests Cypress
       - name: Run Cypress auth tests
         uses: cypress-io/github-action@v6
         with:

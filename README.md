@@ -79,3 +79,6 @@ npx cypress run
 # Exécuter uniquement certains tests
 npx cypress run --spec 'cypress/e2e/auth/**/*.cy.ts,cypress/e2e/dashboard/**/*.cy.ts'
 ```
+
+
+
