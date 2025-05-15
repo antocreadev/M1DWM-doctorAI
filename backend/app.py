@@ -825,28 +825,11 @@ def upload_file():
         app.logger.error(f"Erreur lors du téléchargement sur GCS: {e}")
         return jsonify(message=f"Erreur: {str(e)}"), 500
 
-
 @app.route("/fichiers/<filename>", methods=["GET"])
 @jwt_required()
 def telecharger_fichier(filename):
     """
     Télécharger un fichier depuis Cloud Storage
-    ---
-    tags:
-      - Fichiers
-    security:
-      - Bearer: []
-    parameters:
-      - in: path
-        name: filename
-        type: string
-        required: true
-        description: Nom du fichier à télécharger
-    responses:
-      200:
-        description: Fichier téléchargé
-      404:
-        description: Fichier non trouvé
     """
     # Trouver le fichier dans la base de données
     fichier = File.query.filter_by(nom=filename).first()
@@ -863,24 +846,35 @@ def telecharger_fichier(filename):
             return jsonify(message="Fichier non trouvé sur le stockage"), 404
 
         # Créer un fichier temporaire pour stocker le contenu
-        with tempfile.NamedTemporaryFile(delete=False) as temp:
-            blob.download_to_filename(temp.name)
-            temp_path = temp.name
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, filename)
+        blob.download_to_filename(temp_path)
+        
+        # Utiliser un décorateur pour nettoyer après l'envoi
+        @after_this_request
+        def remove_file(response):
+            try:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception as e:
+                app.logger.error(f"Erreur lors de la suppression du fichier temporaire: {e}")
+            return response
+            
+        # Définir le type MIME correct
+        mime_type = blob.content_type or 'application/octet-stream'
+        if filename.endswith('.pdf'):
+            mime_type = 'application/pdf'
 
-        # Envoyer le fichier en réponse
+        # Envoyer le fichier en réponse (sans le paramètre after_this_request)
         return send_file(
             temp_path,
             as_attachment=True,
             download_name=filename,
-            mimetype=blob.content_type,
-            # Nettoyer le fichier temporaire après l'envoi
-            after_this_request=lambda _: os.remove(temp_path) or None,
+            mimetype=mime_type
         )
     except Exception as e:
         app.logger.error(f"Erreur lors du téléchargement depuis GCS: {e}")
         return jsonify(message=f"Erreur: {str(e)}"), 500
-
-
 @app.route("/fichiers/<int:id>", methods=["DELETE"])
 @jwt_required()
 def supprimer_fichier(id):
