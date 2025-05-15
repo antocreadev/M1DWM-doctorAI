@@ -89,10 +89,7 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install dependencies with npm
-        run: |
-          cd frontend
-          npm ci
+        # Installer les dépendances système requises pour la compilation
       - name: Install system dependencies
         run: |
           sudo apt-get update
